@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: letter; margin: 0; }
+
+  body {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9pt;
+    color: #1a1a1a;
+    background: #fff;
+    width: 8.5in;
+    min-height: 11in;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    background: #A51C30;
+    padding: 0.32in 0.45in 0.28in;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .player-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 34pt;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+    color: #fff;
+  }
+  .player-meta {
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    margin-top: 6pt;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .header-right { text-align: right; }
+  .header-right .team-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 13pt;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.04em;
+  }
+  .header-right .report-label {
+    font-size: 7pt;
+    color: rgba(255,255,255,0.55);
+    margin-top: 4pt;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* ── Sample warning ── */
+  .sample-warning {
+    background: #fff3f4;
+    border-left: 4px solid #A51C30;
+    padding: 9pt 16pt;
+    margin: 0.18in 0.45in 0;
+    font-size: 8pt;
+    color: #7a1424;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Content ── */
+  .content { padding: 0.18in 0.45in 0.28in; }
+
+  /* ── Section heading — solid bar ── */
+  .section-header {
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 5pt 10pt;
+    margin-bottom: 10pt;
+    margin-top: 14pt;
+  }
+  .section-header.crimson { background: #A51C30; }
+  .section-header:first-child { margin-top: 0; }
+
+  /* ── Two-column flex row ── */
+  .stat-row {
+    display: flex;
+    gap: 10pt;
+    margin-bottom: 10pt;
+  }
+
+  /* ── Stat card ── */
+  .stat-card {
+    flex: 1;
+    border: 1px solid #e0e0e0;
+    border-top: 3px solid #A51C30;
+    padding: 11pt 13pt 10pt;
+    background: #fff;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .stat-card.muted { border-top-color: #bbb; background: #fafafa; }
+  .stat-card.full-width { flex: none; width: 100%; }
+
+  .stat-label {
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 5pt;
+  }
+
+  .stat-primary {
+    font-size: 26pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 3pt;
+  }
+  .stat-primary.muted { color: #aaa; font-size: 18pt; }
+
+  .stat-secondary {
+    font-size: 9.5pt;
+    color: #444;
+    font-weight: 500;
+    margin-bottom: 3pt;
+  }
+
+  .stat-sublabel {
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 3pt;
+  }
+
+  .stat-context {
+    font-size: 7pt;
+    color: #777;
+    line-height: 1.45;
+    margin-top: 4pt;
+  }
+
+  /* ── Vs-team badge ── */
+  .vs-team {
+    display: inline-block;
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 2pt 7pt;
+    border-radius: 3pt;
+    margin-top: 5pt;
+    margin-right: 5pt;
+  }
+  .vs-team.positive { background: #e8f5e8; color: #2a6e2a; }
+  .vs-team.negative { background: #faeaea; color: #8a2020; }
+  .vs-team.neutral  { background: #f0f0f0; color: #555; }
+
+  .small-badge {
+    display: inline-block;
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #A51C30;
+    border: 1px solid #A51C30;
+    padding: 1.5pt 5pt;
+    border-radius: 2pt;
+    margin-top: 5pt;
+  }
+
+  /* ── Sparkline ── */
+  .spark-wrap {
+    margin-top: 7pt;
+    height: 18pt;
+    overflow: hidden;
+  }
+  .spark-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 2pt;
+    height: 16pt;
+  }
+  .spark-bar {
+    flex: 1;
+    background: #A51C30;
+    opacity: 0.55;
+    min-height: 2pt;
+    border-radius: 1pt 1pt 0 0;
+  }
+  .spark-bar.empty { background: #ddd; height: 3pt !important; opacity: 1; }
+  .stat-trend {
+    font-size: 6.5pt;
+    color: #999;
+    margin-top: 3pt;
+    font-style: italic;
+  }
+
+  /* ── Deployment row ── */
+  .dep-grid {
+    display: flex;
+    gap: 0;
+  }
+  .dep-item {
+    flex: 1;
+    padding: 10pt 14pt;
+    border-right: 1px solid #ebebeb;
+  }
+  .dep-item:last-child { border-right: none; }
+  .dep-item-label {
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 4pt;
+  }
+  .dep-item-value {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 4pt;
+  }
+  .dep-item-context {
+    font-size: 6.5pt;
+    color: #888;
+    line-height: 1.4;
+  }
+
+  /* ── Faceoff dual ── */
+  .fo-row {
+    display: flex;
+    gap: 0;
+    margin-top: 8pt;
+  }
+  .fo-item {
+    flex: 1;
+    padding-right: 16pt;
+    border-right: 1px solid #ebebeb;
+    margin-right: 16pt;
+  }
+  .fo-item:last-child { border-right: none; padding-right: 0; margin-right: 0; }
+  .fo-label {
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 3pt;
+  }
+  .fo-value {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+  }
+  .fo-context { font-size: 6.5pt; color: #888; margin-top: 3pt; }
+  .fo-caveat {
+    margin-top: 10pt;
+    padding-top: 8pt;
+    border-top: 1px solid #eee;
+    font-size: 6.5pt;
+    color: #999;
+    font-style: italic;
+  }
+
+  /* ── Footer ── */
+  .report-footer {
+    position: fixed;
+    bottom: 0.28in;
+    left: 0.45in;
+    right: 0.45in;
+    border-top: 1px solid #ddd;
+    padding-top: 6pt;
+    display: flex;
+    justify-content: space-between;
+    font-size: 6.5pt;
+    color: #bbb;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <div>
+    <div class="player-name">{{ player.name }}</div>
+    <div class="player-meta">
+      {% if player.number %}#{{ player.number }} · {% endif %}{{ player.position }}{% if player.is_center %} (C){% endif %} · Season Stats
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="team-name">Harvard ECAC</div>
+    <div class="report-label">Player Analytics Report · {{ generated_date }}</div>
+  </div>
+</div>
+
+{% if small_sample %}
+<div class="sample-warning">
+  ⚠ SMALL SAMPLE — {{ games_played }} game{% if games_played != 1 %}s{% endif %} logged. Numbers below are directional only; interpret with additional caution.
+</div>
+{% endif %}
+
+<div class="content">
+
+  <!-- ── Territorial & Quality ── -->
+  <div class="section-header crimson">Territorial &amp; Quality Impact · On-Ice 5v5</div>
+
+  <div class="stat-row">
+    <!-- CF% -->
+    <div class="stat-card {% if agg.on_ice_cf_pct is none %}muted{% endif %}">
+      <div class="stat-label">Possession Share (On-Ice CF%)</div>
+      <div class="stat-primary {% if agg.on_ice_cf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_cf_pct) }}</div>
+      <div class="stat-sublabel">Shot Attempt Share While On Ice</div>
+      <div class="stat-context">Team's Corsi (all shot attempts) while this player is on the ice.</div>
+      {% set team_cf = team.cf_pct %}
+      {% if agg.on_ice_cf_pct is not none and team_cf is not none %}
+        {% set diff = agg.on_ice_cf_pct - team_cf %}
+        <div class="vs-team {% if diff > 0.005 %}positive{% elif diff < -0.005 %}negative{% else %}neutral{% endif %}">
+          {{ "+" if diff >= 0 }}{{ fmt_pct(diff) }} vs team {{ fmt_pct(team_cf) }}
+        </div>
+      {% endif %}
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+      {% if games_played > 1 %}
+        {% set spark_vals = spark('on_ice_cf_pct') %}
+        {% set spark_valid = spark_vals | select('ne', none) | list %}
+        {% if spark_valid %}
+          {% set spark_max = spark_valid | max %}
+          {% set spark_min = spark_valid | min %}
+          {% set spark_range = [spark_max - spark_min, 0.001] | max %}
+          <div class="spark-wrap">
+            <div class="spark-row">
+              {% for v in spark_vals %}
+                {% if v is not none %}<div class="spark-bar" style="height: {{ [((v - spark_min) / spark_range * 14 + 2), 2] | max }}pt"></div>
+                {% else %}<div class="spark-bar empty"></div>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="stat-trend">{{ trend_dir(spark_vals) | capitalize }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- xGF% -->
+    <div class="stat-card {% if agg.on_ice_xgf_pct is none %}muted{% endif %}">
+      <div class="stat-label">Quality Shot Share (On-Ice xGF%)</div>
+      <div class="stat-primary {% if agg.on_ice_xgf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_xgf_pct) }}</div>
+      <div class="stat-sublabel">Expected Goal Share While On Ice</div>
+      <div class="stat-context">Team's share of expected goals (xG model) while this player is on the ice at 5v5.</div>
+      {% set team_xgf = team.xgf_pct %}
+      {% if agg.on_ice_xgf_pct is not none and team_xgf is not none %}
+        {% set diff = agg.on_ice_xgf_pct - team_xgf %}
+        <div class="vs-team {% if diff > 0.005 %}positive{% elif diff < -0.005 %}negative{% else %}neutral{% endif %}">
+          {{ "+" if diff >= 0 }}{{ fmt_pct(diff) }} vs team {{ fmt_pct(team_xgf) }}
+        </div>
+      {% endif %}
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+      {% if games_played > 1 %}
+        {% set spark_vals = spark('on_ice_xgf_pct') %}
+        {% set spark_valid = spark_vals | select('ne', none) | list %}
+        {% if spark_valid %}
+          {% set spark_max = spark_valid | max %}
+          {% set spark_min = spark_valid | min %}
+          {% set spark_range = [spark_max - spark_min, 0.001] | max %}
+          <div class="spark-wrap">
+            <div class="spark-row">
+              {% for v in spark_vals %}
+                {% if v is not none %}<div class="spark-bar" style="height: {{ [((v - spark_min) / spark_range * 14 + 2), 2] | max }}pt"></div>
+                {% else %}<div class="spark-bar empty"></div>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="stat-trend">{{ trend_dir(spark_vals) | capitalize }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <!-- SF% -->
+    <div class="stat-card {% if agg.on_ice_sf_pct is none %}muted{% endif %}">
+      <div class="stat-label">Shots on Goal Share (On-Ice SF%)</div>
+      <div class="stat-primary {% if agg.on_ice_sf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_sf_pct) }}</div>
+      <div class="stat-sublabel">SOG Share While On Ice · 5v5</div>
+      <div class="stat-context">Team's share of shots on goal while this player is on the ice.</div>
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+    </div>
+
+    <!-- Shot Quality -->
+    <div class="stat-card">
+      <div class="stat-label">Shot Quality (xFSh% / xFSv%)</div>
+      <div class="stat-primary">{{ fmt_pct(agg.xfsh_pct) }}</div>
+      <div class="stat-secondary">Sh · <strong>{{ fmt_pct(agg.xfsv_pct) }}</strong> Sv</div>
+      <div class="stat-sublabel">Shooting Danger % / Save Danger Suppressed %</div>
+      <div class="stat-context">xFSh% = xGF ÷ FF (avg danger per unblocked shot for). xFSv% = 1 − (xGA ÷ FA) (danger suppressed per unblocked shot against).</div>
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- ── Shot Volume Rates ── -->
+  <div class="section-header">Shot Generation &amp; Suppression · On-Ice 5v5 Per 60 Min</div>
+
+  <div class="stat-row">
+    <!-- Offensive -->
+    <div class="stat-card">
+      <div class="stat-label">Offensive Drive</div>
+      <div class="stat-primary">{{ fmt_float(agg.cf60, 1) }}</div>
+      <div class="stat-secondary">CF60 · <strong>{{ fmt_float(agg.ff60, 1) }}</strong> FF60 · <strong>{{ fmt_float(agg.sf60, 1) }}</strong> SF60</div>
+      <div class="stat-sublabel">Shot Attempts / Unblocked / On-Goal Generated per 60 min</div>
+      <div class="stat-context">Higher = more offensive zone pressure generated while on ice.</div>
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+      {% if games_played > 1 %}
+        {% set spark_vals = spark('cf60') %}
+        {% set spark_valid = spark_vals | select('ne', none) | list %}
+        {% if spark_valid %}
+          {% set spark_max = spark_valid | max %}
+          {% set spark_min = spark_valid | min %}
+          {% set spark_range = [spark_max - spark_min, 0.001] | max %}
+          <div class="spark-wrap">
+            <div class="spark-row">
+              {% for v in spark_vals %}
+                {% if v is not none %}<div class="spark-bar" style="height: {{ [((v - spark_min) / spark_range * 14 + 2), 2] | max }}pt"></div>
+                {% else %}<div class="spark-bar empty"></div>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="stat-trend">CF60 — {{ trend_dir(spark_vals) }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- Defensive -->
+    <div class="stat-card">
+      <div class="stat-label">Defensive Hold</div>
+      <div class="stat-primary">{{ fmt_float(agg.ca60, 1) }}</div>
+      <div class="stat-secondary">CA60 · <strong>{{ fmt_float(agg.fa60, 1) }}</strong> FA60 · <strong>{{ fmt_float(agg.sa60, 1) }}</strong> SA60</div>
+      <div class="stat-sublabel">Shot Attempts / Unblocked / On-Goal Allowed per 60 min</div>
+      <div class="stat-context">Lower = better defensive suppression while on ice.</div>
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+      {% if games_played > 1 %}
+        {% set spark_vals = spark('ca60') %}
+        {% set spark_valid = spark_vals | select('ne', none) | list %}
+        {% if spark_valid %}
+          {% set spark_max = spark_valid | max %}
+          {% set spark_min = spark_valid | min %}
+          {% set spark_range = [spark_max - spark_min, 0.001] | max %}
+          <div class="spark-wrap">
+            <div class="spark-row">
+              {% for v in spark_vals %}
+                {% if v is not none %}<div class="spark-bar" style="height: {{ [((v - spark_min) / spark_range * 14 + 2), 2] | max }}pt"></div>
+                {% else %}<div class="spark-bar empty"></div>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="stat-trend">CA60 — {{ trend_dir(spark_vals) }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Individual Shooting ── -->
+  <div class="section-header">Individual Shooting · Personal Output</div>
+  <div class="stat-row">
+    <div class="stat-card {% if agg_icf is none and agg_isf is none %}muted{% endif %}">
+      <div class="stat-label">Individual Corsi For (ICF)</div>
+      <div class="stat-primary {% if agg_icf is none %}muted{% endif %}">{% if agg_icf is not none %}{{ "%.0f"|format(agg_icf) }}{% else %}—{% endif %}</div>
+      <div class="stat-sublabel">Shot Attempts Generated by This Player</div>
+      <div class="stat-context">Total shot attempts (goals, on-goal, missed, blocked) taken personally — not team totals. The only stat here that is purely individual.</div>
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+    </div>
+    <div class="stat-card {% if agg_isf is none %}muted{% endif %}">
+      <div class="stat-label">Individual Shots on Goal (ISF)</div>
+      <div class="stat-primary {% if agg_isf is none %}muted{% endif %}">{% if agg_isf is not none %}{{ "%.0f"|format(agg_isf) }}{% else %}—{% endif %}</div>
+      <div class="stat-sublabel">Shots on Goal by This Player</div>
+      <div class="stat-context">Shots that reached the goalie (on-goal subset of ICF). Captures offensive zone presence and shooting volume independent of linemates.</div>
+      {% if small_sample %}<div class="small-badge">Small Sample</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- ── Deployment ── -->
+  <div class="section-header">Usage &amp; Deployment · 5v5</div>
+  <div class="stat-card full-width" style="padding: 0; margin-bottom: 10pt;">
+    <div class="dep-grid">
+      <div class="dep-item">
+        <div class="dep-item-label">Median Shift Length</div>
+        <div class="dep-item-value">{{ fmt_shift(agg.median_shift_seconds) }}</div>
+        <div class="dep-item-context">Weighted avg of per-game medians (by TOI). Median is robust to outlier long shifts.</div>
+      </div>
+      <div class="dep-item">
+        <div class="dep-item-label">Total 5v5 TOI</div>
+        <div class="dep-item-value">{% if agg.toi_5v5 is not none %}{{ "%.1f"|format(agg.toi_5v5) }} min{% else %}—{% endif %}</div>
+        <div class="dep-item-context">Across {{ games_played }} game{% if games_played != 1 %}s{% endif %} logged.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Faceoffs (centers only) ── -->
+  {% if player.position == 'F' %}
+  <div class="section-header crimson">Faceoff Battle · Forwards</div>
+  <div class="stat-card full-width" style="margin-bottom: 10pt;">
+    <div class="stat-label">FO% — Two Versions (confirm with 49ing which is their labeled FO%)</div>
+    <div class="fo-row">
+      <div class="fo-item">
+        <div class="fo-label">Personal Draw Win%</div>
+        <div class="fo-value">{{ fmt_pct(agg.personal_fo_pct) }}</div>
+        <div class="fo-context">Draws taken/won directly by this player.</div>
+      </div>
+      <div class="fo-item">
+        <div class="fo-label">On-Ice Team FO%</div>
+        <div class="fo-value">{{ fmt_pct(agg.on_ice_fo_pct) }}</div>
+        <div class="fo-context">All team faceoff results while this player is on ice (includes teammates' draws).</div>
+      </div>
+    </div>
+    <div class="fo-caveat">⚠ 49ing's "FO%" definition is ambiguous between these two measures. Both are shown until confirmed with their team.</div>
+    {% if small_sample %}<div class="small-badge" style="margin-top:8pt;">Small Sample</div>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<div class="report-footer">
+  <span>Generated {{ generated_date }}</span>
+  <span>ECAC Analytics Tool · All stats via 49ing Data Cockpit</span>
+  <span>{{ games_played }} game{% if games_played != 1 %}s{% endif %} · 5v5 unless noted</span>
+</div>
+
+</body>
+</html>

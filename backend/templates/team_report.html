@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @page { size: letter; margin: 0; }
+
+  body {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9pt;
+    color: #1a1a1a;
+    background: #fff;
+    width: 8.5in;
+    min-height: 11in;
+  }
+
+  .report-header {
+    background: #A51C30;
+    color: #fff;
+    padding: 0.35in 0.45in 0.3in;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .header-left .team-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 28pt;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #fff;
+  }
+
+  .header-left .team-meta {
+    font-size: 9pt;
+    font-weight: 500;
+    color: rgba(255,255,255,0.75);
+    margin-top: 4pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    text-align: right;
+  }
+
+  .header-right .games-count {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 26pt;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .header-right .games-label {
+    font-size: 7.5pt;
+    color: rgba(255,255,255,0.6);
+    margin-top: 3pt;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .content { padding: 0.2in 0.45in 0.3in; }
+
+  .section-title {
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #A51C30;
+    border-bottom: 1.5px solid #A51C30;
+    padding-bottom: 3pt;
+    margin-bottom: 10pt;
+    margin-top: 14pt;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10pt;
+  }
+
+  .stat-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10pt;
+  }
+
+  .stat-card {
+    border: 1px solid #e8e8e8;
+    border-top: 3px solid #A51C30;
+    padding: 10pt 12pt;
+    background: #fff;
+    break-inside: avoid;
+  }
+
+  .stat-card.wide {
+    grid-column: span 2;
+  }
+
+  .stat-name {
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4pt;
+  }
+
+  .stat-primary {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-secondary {
+    font-size: 10pt;
+    color: #555;
+    font-weight: 500;
+  }
+
+  .stat-values {
+    display: flex;
+    align-items: baseline;
+    gap: 8pt;
+    margin-bottom: 4pt;
+  }
+
+  .stat-label {
+    font-size: 8pt;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 2pt;
+  }
+
+  .stat-context {
+    font-size: 7.5pt;
+    color: #666;
+    margin-top: 4pt;
+    line-height: 1.4;
+  }
+
+  .stat-trend {
+    font-size: 7pt;
+    color: #888;
+    margin-top: 3pt;
+    font-style: italic;
+  }
+
+  /* Special teams comparison */
+  .st-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12pt;
+  }
+
+  .st-item-label {
+    font-size: 6.5pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 2pt;
+  }
+
+  .st-item-value {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  /* Attack scenario bar chart */
+  .scenario-bars {
+    margin-top: 8pt;
+  }
+
+  .scenario-row {
+    display: flex;
+    align-items: center;
+    gap: 6pt;
+    margin-bottom: 5pt;
+  }
+
+  .scenario-label {
+    font-size: 7pt;
+    font-weight: 600;
+    color: #555;
+    width: 52pt;
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .scenario-track {
+    flex: 1;
+    background: #f0f0f0;
+    height: 10pt;
+    border-radius: 2pt;
+    overflow: hidden;
+  }
+
+  .scenario-fill {
+    height: 100%;
+    background: #A51C30;
+    border-radius: 2pt;
+  }
+
+  .scenario-pct {
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #333;
+    width: 28pt;
+  }
+
+  /* Win prob timeline */
+  .win-prob-section {
+    margin-top: 8pt;
+  }
+
+  .game-row {
+    margin-bottom: 10pt;
+    break-inside: avoid;
+  }
+
+  .game-row-header {
+    font-size: 7pt;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4pt;
+  }
+
+  .timeline-track {
+    display: flex;
+    align-items: flex-end;
+    height: 28pt;
+    gap: 1pt;
+    background: #f8f8f8;
+    border-radius: 2pt;
+    padding: 2pt;
+  }
+
+  .timeline-bar {
+    flex: 1;
+    border-radius: 1pt 1pt 0 0;
+    min-height: 2pt;
+  }
+
+  .timeline-bar.above { background: #A51C30; }
+  .timeline-bar.below { background: #ccc; }
+  .timeline-bar.neutral { background: #ddd; }
+
+  .timeline-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: 5.5pt;
+    color: #aaa;
+    margin-top: 2pt;
+  }
+
+  /* Trend sparkline */
+  .spark-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 2pt;
+    height: 16pt;
+    margin-top: 5pt;
+  }
+
+  .spark-bar {
+    flex: 1;
+    background: #A51C30;
+    opacity: 0.6;
+    min-height: 2pt;
+    border-radius: 1pt 1pt 0 0;
+  }
+
+  .spark-bar.empty { background: #ddd; height: 4pt !important; }
+
+  .report-footer {
+    border-top: 1px solid #ddd;
+    margin: 0 0.45in;
+    padding: 8pt 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 6.5pt;
+    color: #aaa;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <div class="header-left">
+    <div class="team-title">Harvard ECAC</div>
+    <div class="team-meta">Women's Hockey · Season Analytics Report</div>
+  </div>
+  <div class="header-right">
+    <div class="games-count">{{ agg.games_logged }}</div>
+    <div class="games-label">Games Logged · {{ generated_date }}</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── Possession & Quality ── -->
+  <div class="section-title">Possession &amp; Shot Quality · 5v5</div>
+  <div class="stat-grid">
+
+    <div class="stat-card">
+      <div class="stat-name">Possession Share (CF%)</div>
+      <div class="stat-values">
+        <span class="stat-primary">{{ fmt_pct(agg.cf_pct) }}</span>
+      </div>
+      <div class="stat-label">Corsi For % — All Shot Attempts For ÷ Total</div>
+      <div class="stat-context">Team controls play when above 50%. Includes all shot attempt types: goals, on-goal, missed, iron, blocked.</div>
+      {% set sparks = agg.cf_pct_trend %}
+      {% set spark_valid = sparks | map(attribute='value') | select('ne', none) | list %}
+      {% if spark_valid %}
+        {% set spark_max = spark_valid | max %}
+        {% set spark_min = spark_valid | min %}
+        {% set spark_range = [spark_max - spark_min, 0.001] | max %}
+        <div class="spark-row">
+          {% for pt in sparks %}
+            {% if pt.value is not none %}
+              <div class="spark-bar" style="height: {{ [((pt.value - spark_min) / spark_range * 13 + 2), 2] | max }}pt"></div>
+            {% else %}<div class="spark-bar empty"></div>{% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <div class="stat-trend">{{ trend_dir(agg.cf_pct_trend | map(attribute='value') | list) | capitalize }}</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-name">Quality Shot Share (xGF%)</div>
+      <div class="stat-values">
+        <span class="stat-primary">{{ fmt_pct(agg.xgf_pct) }}</span>
+      </div>
+      <div class="stat-label">Expected Goal For % — Quality-Weighted Shot Share</div>
+      <div class="stat-context">xGF% weights shots by their goal probability from 49ing's model — more signal than raw shots on goal.</div>
+      {% set sparks = agg.xgf_pct_trend %}
+      {% set spark_valid = sparks | map(attribute='value') | select('ne', none) | list %}
+      {% if spark_valid %}
+        {% set spark_max = spark_valid | max %}
+        {% set spark_min = spark_valid | min %}
+        {% set spark_range = [spark_max - spark_min, 0.001] | max %}
+        <div class="spark-row">
+          {% for pt in sparks %}
+            {% if pt.value is not none %}
+              <div class="spark-bar" style="height: {{ [((pt.value - spark_min) / spark_range * 13 + 2), 2] | max }}pt"></div>
+            {% else %}<div class="spark-bar empty"></div>{% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <div class="stat-trend">{{ trend_dir(agg.xgf_pct_trend | map(attribute='value') | list) | capitalize }}</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-name">Offense Created (xGF60)</div>
+      <div class="stat-values">
+        <span class="stat-primary">{{ fmt_float(agg.xgf60, 2) }}</span>
+      </div>
+      <div class="stat-label">Expected Goals For per 60 Minutes · 5v5</div>
+      <div class="stat-context">Rate of quality chance generation, normalized for comparing games of different lengths.</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-name">Defense Exposed (xGA60)</div>
+      <div class="stat-values">
+        <span class="stat-primary">{{ fmt_float(agg.xga60, 2) }}</span>
+      </div>
+      <div class="stat-label">Expected Goals Against per 60 Minutes · 5v5</div>
+      <div class="stat-context">Rate of quality chances surrendered. Lower is better.</div>
+    </div>
+
+  </div>
+
+  <!-- ── Special Teams ── -->
+  <div class="section-title">Special Teams · Power Play (5v4) &amp; Penalty Kill (4v5)</div>
+  <div class="stat-grid">
+
+    <div class="stat-card">
+      <div class="stat-name">Power Play (5v4)</div>
+      <div class="st-row">
+        <div>
+          <div class="st-item-label">CF%</div>
+          <div class="st-item-value">{{ fmt_pct(agg.pp_cf_pct) }}</div>
+        </div>
+        <div>
+          <div class="st-item-label">xGF%</div>
+          <div class="st-item-value">{{ fmt_pct(agg.pp_xgf_pct) }}</div>
+        </div>
+      </div>
+      <div class="stat-context" style="margin-top:6pt;">Possession and quality share during power plays. &gt;50% means dominating time of possession even on the PP.</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-name">Penalty Kill (4v5)</div>
+      <div class="st-row">
+        <div>
+          <div class="st-item-label">CF%</div>
+          <div class="st-item-value">{{ fmt_pct(agg.pk_cf_pct) }}</div>
+        </div>
+        <div>
+          <div class="st-item-label">xGF%</div>
+          <div class="st-item-value">{{ fmt_pct(agg.pk_xgf_pct) }}</div>
+        </div>
+      </div>
+      <div class="stat-context" style="margin-top:6pt;">Possession and quality share during penalty kills. Higher = more shorthanded control and dangerous PK.</div>
+    </div>
+
+  </div>
+
+  <!-- ── Attack Scenarios ── -->
+  <div class="section-title">Attack Scenario Mix · How Chances Were Generated</div>
+  <div class="stat-card" style="margin-bottom:10pt;">
+    <div class="stat-name">Shot Attempt Distribution by Entry Type</div>
+    <div class="stat-context" style="margin-bottom:8pt;">
+      Each shot attempt is tagged to exactly one scenario. Rebounds credited to the originating scenario.
+    </div>
+    <div class="scenario-bars">
+      {% set scenarios = [
+        ("Rush", agg.rush_share, "Entry → shot within 5 sec"),
+        ("OZ Forecheck", agg.oz_fc_share, "Forecheck possession → shot within 5 sec"),
+        ("OZ Faceoff", agg.oz_fo_share, "OZ faceoff win → shot within 5 sec"),
+        ("Sust. Possession", agg.sust_pos_share, "5+ sec continuous OZ possession → shot")
+      ] %}
+      {% for name, share, desc in scenarios %}
+      <div class="scenario-row">
+        <div class="scenario-label">{{ name }}</div>
+        <div class="scenario-track">
+          {% if share is not none %}
+            <div class="scenario-fill" style="width: {{ (share * 100) | round(1) }}%"></div>
+          {% endif %}
+        </div>
+        <div class="scenario-pct">
+          {% if share is not none %}{{ fmt_pct(share) }}{% else %}—{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+
+</div>
+
+<div class="report-footer">
+  <span>Generated {{ generated_date }}</span>
+  <span>ECAC Analytics Tool · All stats via 49ing Data Cockpit</span>
+  <span>{{ agg.games_logged }} game{% if agg.games_logged != 1 %}s{% endif %} · 5v5 unless noted</span>
+</div>
+
+</body>
+</html>
