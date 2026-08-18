@@ -87,3 +87,79 @@ def evaluate_rule(rule: Rule, trend: list[dict]) -> Optional[Flag]:
         window_value=win["mean"],
         baseline_value=base["mean"],
     )
+
+
+TOI_TREND_THRESHOLD = 0.10  # ±10%
+TOI_OUTLIER_LOW = 0.50
+TOI_OUTLIER_HIGH = 1.50
+
+
+def _mean_toi(trend_slice: list[dict]) -> Optional[float]:
+    tois = [pt["toi_5v5"] for pt in trend_slice
+            if pt.get("toi_5v5") is not None and pt["toi_5v5"] >= MIN_TOI_MINUTES]
+    if not tois:
+        return None
+    return sum(tois) / len(tois)
+
+
+def evaluate_toi_trend(trend: list[dict]) -> Optional[Flag]:
+    """L3-vs-L10 TOI shift flag. Requires ≥10 qualifying games."""
+    qualifying = [pt for pt in trend
+                  if pt.get("toi_5v5") is not None and pt["toi_5v5"] >= MIN_TOI_MINUTES]
+    if len(qualifying) < 10:
+        return None
+    l10_mean = _mean_toi(qualifying[-10:])
+    l3_mean = _mean_toi(qualifying[-3:])
+    if l10_mean is None or l3_mean is None or l10_mean == 0:
+        return None
+    pct_shift = (l3_mean - l10_mean) / l10_mean
+    if abs(pct_shift) < TOI_TREND_THRESHOLD:
+        return None
+    return Flag(
+        kind="trend",
+        label="TOI shift",
+        direction="up" if pct_shift > 0 else "down",
+        z_score=None,
+        window_value=l3_mean,
+        baseline_value=l10_mean,
+    )
+
+
+def evaluate_toi_outliers(trend: list[dict]) -> list[Flag]:
+    """Per-game outlier flags. Requires ≥10 qualifying prior games for each check."""
+    qualifying = [pt for pt in trend
+                  if pt.get("toi_5v5") is not None and pt["toi_5v5"] >= MIN_TOI_MINUTES]
+    if len(qualifying) < 10:
+        return []
+    # Sort by game order preserved by trend list order (aggregate_player_stats sorts by date)
+    flags: list[Flag] = []
+    # Only games at position >= 10 (index) have a prior L10 baseline
+    for i in range(10, len(qualifying)):
+        prior_10 = qualifying[i - 10:i]
+        baseline = _mean_toi(prior_10)
+        game = qualifying[i]
+        toi = game["toi_5v5"]
+        if baseline is None or baseline == 0 or toi is None:
+            continue
+        ratio = toi / baseline
+        if ratio < TOI_OUTLIER_LOW:
+            flags.append(Flag(
+                kind="outlier",
+                label="reduced role",
+                direction="down",
+                z_score=None,
+                window_value=toi,
+                baseline_value=baseline,
+                game_id=game["game_id"],
+            ))
+        elif ratio > TOI_OUTLIER_HIGH:
+            flags.append(Flag(
+                kind="outlier",
+                label="expanded role",
+                direction="up",
+                z_score=None,
+                window_value=toi,
+                baseline_value=baseline,
+                game_id=game["game_id"],
+            ))
+    return flags

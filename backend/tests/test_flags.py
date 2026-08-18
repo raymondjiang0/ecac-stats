@@ -1,5 +1,5 @@
 import pytest
-from app.flags import Rule, Flag, evaluate_rule, toi_weighted_stats
+from app.flags import Rule, Flag, evaluate_rule, toi_weighted_stats, evaluate_toi_trend, evaluate_toi_outliers
 
 
 def _trend(*points):
@@ -85,3 +85,65 @@ class TestEvaluateRule:
         trend = self._mk_trend([100.0, 100.0, 100.0, 50.0, 50.0, 50.0, 50.0, 50.0])
         # last 5 all 50 → std = 0 → cannot compute z → None
         assert evaluate_rule(rule, trend) is None
+
+
+def _toi_trend(toi_values):
+    return [
+        {"game_id": i + 1, "date": f"2025-10-{i+1:02d}", "toi_5v5": v, "cf60": 50.0}
+        for i, v in enumerate(toi_values)
+    ]
+
+
+class TestEvaluateToiTrend:
+    def test_returns_none_when_under_10_games(self):
+        assert evaluate_toi_trend(_toi_trend([15.0] * 5)) is None
+
+    def test_returns_none_when_trend_within_10_pct(self):
+        # all 15 min TOI → no shift
+        assert evaluate_toi_trend(_toi_trend([15.0] * 10)) is None
+
+    def test_flags_trending_up(self):
+        # L10 mean = ~15, L3 mean = 20 → +33%
+        trend = _toi_trend([15, 15, 15, 15, 15, 15, 15, 20, 20, 20])
+        flag = evaluate_toi_trend(trend)
+        assert flag is not None
+        assert flag.direction == "up"
+        assert flag.label == "TOI shift"
+
+    def test_flags_trending_down(self):
+        trend = _toi_trend([15, 15, 15, 15, 15, 15, 15, 8, 8, 8])
+        flag = evaluate_toi_trend(trend)
+        assert flag is not None
+        assert flag.direction == "down"
+
+    def test_does_not_flag_9_pct_shift(self):
+        # L10 mean = ~15.4, L3 = 16.7 → +8.4%
+        trend = _toi_trend([15, 15, 15, 15, 15, 15, 15, 17, 16, 17])
+        assert evaluate_toi_trend(trend) is None
+
+
+class TestEvaluateToiOutliers:
+    def test_returns_empty_when_under_10_games(self):
+        assert evaluate_toi_outliers(_toi_trend([15.0] * 5)) == []
+
+    def test_flags_reduced_role_game(self):
+        # L10 (games 1-10) mean = 15; game 11 = 5 (33%) → reduced role
+        trend = _toi_trend([15.0] * 10 + [5.0])
+        flags = evaluate_toi_outliers(trend)
+        # first 10 games have no L10 baseline for themselves, but game 11 does
+        reduced = [f for f in flags if f.label == "reduced role"]
+        assert len(reduced) == 1
+        assert reduced[0].game_id == 11
+
+    def test_flags_expanded_role_game(self):
+        trend = _toi_trend([12.0] * 10 + [22.0])
+        # game 11: 22 / 12 = 1.83 > 1.5
+        flags = evaluate_toi_outliers(trend)
+        expanded = [f for f in flags if f.label == "expanded role"]
+        assert len(expanded) == 1
+        assert expanded[0].game_id == 11
+
+    def test_does_not_flag_normal_game(self):
+        trend = _toi_trend([15.0] * 10 + [14.0])  # 93% of L10
+        flags = evaluate_toi_outliers(trend)
+        assert flags == []
