@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getPlayers, getAllPlayerAggStats, getGames, downloadPlayerReport, downloadTeamReport, exportAllData } from '../api/client'
+import { getPlayers, getAllPlayerAggStats, getGames, downloadPlayerReport, downloadTeamReport, exportAllData, getPlayerAggStats } from '../api/client'
 import type { Player, PlayerAggStats, Game } from '../types'
 import SmallSampleBadge from '../components/SmallSampleBadge'
+import FlagPanel from '../components/FlagPanel'
+import ComparisonRow from '../components/ComparisonRow'
 
 function fmt(v: number | null, mult = 100, dec = 1): string {
   if (v === null || v === undefined) return '—'
@@ -50,6 +52,8 @@ export default function ReportsPage() {
   const [statsLoading, setStatsLoading] = useState(false)
   const [downloading, setDownloading] = useState<number | 'team' | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null)
+  const [detailAggs, setDetailAggs] = useState<Record<number, PlayerAggStats>>({})
 
   // Filter state
   const [preset, setPreset] = useState<Preset>('all')
@@ -93,6 +97,22 @@ export default function ReportsPage() {
     try { await downloadTeamReport(dateFrom, dateTo) }
     catch { alert('PDF generation failed — is the backend running?') }
     finally { setDownloading(null) }
+  }
+
+  async function toggleExpand(playerId: number) {
+    if (expandedPlayerId === playerId) {
+      setExpandedPlayerId(null)
+      return
+    }
+    setExpandedPlayerId(playerId)
+    if (!detailAggs[playerId]) {
+      try {
+        const agg = await getPlayerAggStats(playerId, dateFrom, dateTo)
+        setDetailAggs(prev => ({ ...prev, [playerId]: agg }))
+      } catch {
+        // detail fetch failed silently — panel will render without data
+      }
+    }
   }
 
   if (loading) return <div className="loading">Loading…</div>
@@ -268,14 +288,52 @@ export default function ReportsPage() {
                 </div>
               )}
 
-              <button
-                className="btn btn-primary"
-                onClick={() => downloadPlayer(p)}
-                disabled={downloading === p.id || visibleGames.length === 0}
-                style={{ width: '100%' }}
-              >
-                {downloading === p.id ? 'Generating PDF…' : 'Download Player PDF'}
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => downloadPlayer(p)}
+                  disabled={downloading === p.id || visibleGames.length === 0}
+                  style={{ flex: 1 }}
+                >
+                  {downloading === p.id ? 'Generating PDF…' : 'Download Player PDF'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => toggleExpand(p.id)}
+                  style={{ flexShrink: 0, padding: '0 14px' }}
+                  title={expandedPlayerId === p.id ? 'Collapse detail' : 'Expand detail'}
+                >
+                  {expandedPlayerId === p.id ? '▲' : '▼'}
+                </button>
+              </div>
+
+              {expandedPlayerId === p.id && (
+                <div style={{ marginTop: 12, padding: '16px 0 0 0' }}>
+                  {detailAggs[p.id] ? (
+                    <>
+                      <FlagPanel flags={detailAggs[p.id].flags ?? []} />
+                      <div>
+                        {detailAggs[p.id].comparisons && Object.entries({
+                          toi_5v5:         { label: 'TOI',           unit: 'min'   as const },
+                          cf60:            { label: 'CF60',          unit: 'per60' as const },
+                          ca60:            { label: 'CA60',          unit: 'per60' as const },
+                          on_ice_xgf_pct:  { label: 'xGF%',         unit: 'pct'   as const },
+                          xfsh_pct:        { label: 'xFSh%',        unit: 'pct'   as const },
+                          personal_fo_pct: { label: 'Personal FO%', unit: 'pct'   as const },
+                        }).map(([key, meta]) => {
+                          const cmp = detailAggs[p.id].comparisons?.[key]
+                          if (!cmp) return null
+                          return <ComparisonRow key={key} label={meta.label} comparison={cmp} unit={meta.unit} />
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                      Loading detail…
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}
