@@ -86,6 +86,11 @@ export default function ReportsPage() {
     if (!loading) refreshStats()
   }, [loading, dateFrom, dateTo])
 
+  useEffect(() => {
+    setDetailAggs({})
+    setExpandedPlayerId(null)
+  }, [dateFrom, dateTo])
+
   async function downloadPlayer(p: Player) {
     setDownloading(p.id)
     try { await downloadPlayerReport(p.id, p.name, dateFrom, dateTo) }
