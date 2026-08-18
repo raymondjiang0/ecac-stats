@@ -288,6 +288,18 @@
 </head>
 <body>
 
+{% macro indicator(stat_key) %}
+  {% if agg.comparisons and stat_key in agg.comparisons %}
+    {% set c = agg.comparisons[stat_key].indicator %}
+    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 4px; vertical-align: middle; margin-left: 6px;
+                 background:
+                   {% if c == 'green' %}#7dbf88
+                   {% elif c == 'yellow' %}#c8a84b
+                   {% elif c == 'red' %}#c07272
+                   {% else %}#cccccc{% endif %};"></span>
+  {% endif %}
+{% endmacro %}
+
 <div class="report-header">
   <div>
     <div class="player-name">{{ player.name }}</div>
@@ -307,6 +319,22 @@
 </div>
 {% endif %}
 
+{% if agg.flags %}
+<div style="margin: 12px 0.45in 0; padding: 10px 14px; background: #fafafa; border-left: 3px solid #a30000; border-radius: 4px;">
+  <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #666; margin-bottom: 6px;">
+    Flags this window
+  </div>
+  {% for f in agg.flags %}
+    <span style="display: inline-block; margin: 2px 6px 2px 0; padding: 3px 9px; border-radius: 10px; font-size: 10px; font-weight: 600;
+                 color: {% if f.direction == 'up' %}#3a7d43{% else %}#8a2c2c{% endif %};
+                 background: {% if f.direction == 'up' %}rgba(120,200,130,0.12){% else %}rgba(200,100,100,0.12){% endif %};
+                 border: 1px solid {% if f.direction == 'up' %}rgba(120,200,130,0.5){% else %}rgba(200,100,100,0.5){% endif %};">
+      {% if f.direction == 'up' %}⬆{% else %}⬇{% endif %} {{ f.label }}
+    </span>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="content">
 
   <!-- ── Territorial & Quality ── -->
@@ -316,7 +344,7 @@
     <!-- CF% -->
     <div class="stat-card {% if agg.on_ice_cf_pct is none %}muted{% endif %}">
       <div class="stat-label">Possession Share (On-Ice CF%)</div>
-      <div class="stat-primary {% if agg.on_ice_cf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_cf_pct) }}</div>
+      <div class="stat-primary {% if agg.on_ice_cf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_cf_pct) }}{{ indicator('on_ice_cf_pct') }}</div>
       <div class="stat-sublabel">Shot Attempt Share While On Ice</div>
       <div class="stat-context">Team's Corsi (all shot attempts) while this player is on the ice.</div>
       {% set team_cf = team.cf_pct %}
@@ -350,7 +378,7 @@
     <!-- xGF% -->
     <div class="stat-card {% if agg.on_ice_xgf_pct is none %}muted{% endif %}">
       <div class="stat-label">Quality Shot Share (On-Ice xGF%)</div>
-      <div class="stat-primary {% if agg.on_ice_xgf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_xgf_pct) }}</div>
+      <div class="stat-primary {% if agg.on_ice_xgf_pct is none %}muted{% endif %}">{{ fmt_pct(agg.on_ice_xgf_pct) }}{{ indicator('on_ice_xgf_pct') }}</div>
       <div class="stat-sublabel">Expected Goal Share While On Ice</div>
       <div class="stat-context">Team's share of expected goals (xG model) while this player is on the ice at 5v5.</div>
       {% set team_xgf = team.xgf_pct %}
@@ -395,7 +423,7 @@
     <!-- Shot Quality -->
     <div class="stat-card">
       <div class="stat-label">Shot Quality (xFSh% / xFSv%)</div>
-      <div class="stat-primary">{{ fmt_pct(agg.xfsh_pct) }}</div>
+      <div class="stat-primary">{{ fmt_pct(agg.xfsh_pct) }}{{ indicator('xfsh_pct') }}</div>
       <div class="stat-secondary">Sh · <strong>{{ fmt_pct(agg.xfsv_pct) }}</strong> Sv</div>
       <div class="stat-sublabel">Shooting Danger % / Save Danger Suppressed %</div>
       <div class="stat-context">xFSh% = xGF ÷ FF (avg danger per unblocked shot for). xFSv% = 1 − (xGA ÷ FA) (danger suppressed per unblocked shot against).</div>
@@ -410,7 +438,7 @@
     <!-- Offensive -->
     <div class="stat-card">
       <div class="stat-label">Offensive Drive</div>
-      <div class="stat-primary">{{ fmt_float(agg.cf60, 1) }}</div>
+      <div class="stat-primary">{{ fmt_float(agg.cf60, 1) }}{{ indicator('cf60') }}</div>
       <div class="stat-secondary">CF60 · <strong>{{ fmt_float(agg.ff60, 1) }}</strong> FF60 · <strong>{{ fmt_float(agg.sf60, 1) }}</strong> SF60</div>
       <div class="stat-sublabel">Shot Attempts / Unblocked / On-Goal Generated per 60 min</div>
       <div class="stat-context">Higher = more offensive zone pressure generated while on ice.</div>
@@ -438,7 +466,7 @@
     <!-- Defensive -->
     <div class="stat-card">
       <div class="stat-label">Defensive Hold</div>
-      <div class="stat-primary">{{ fmt_float(agg.ca60, 1) }}</div>
+      <div class="stat-primary">{{ fmt_float(agg.ca60, 1) }}{{ indicator('ca60') }}</div>
       <div class="stat-secondary">CA60 · <strong>{{ fmt_float(agg.fa60, 1) }}</strong> FA60 · <strong>{{ fmt_float(agg.sa60, 1) }}</strong> SA60</div>
       <div class="stat-sublabel">Shot Attempts / Unblocked / On-Goal Allowed per 60 min</div>
       <div class="stat-context">Lower = better defensive suppression while on ice.</div>
@@ -494,11 +522,48 @@
       </div>
       <div class="dep-item">
         <div class="dep-item-label">Total 5v5 TOI</div>
-        <div class="dep-item-value">{% if agg.toi_5v5 is not none %}{{ "%.1f"|format(agg.toi_5v5) }} min{% else %}—{% endif %}</div>
+        <div class="dep-item-value">{% if agg.toi_5v5 is not none %}{{ "%.1f"|format(agg.toi_5v5) }} min{% else %}—{% endif %}{{ indicator('toi_5v5') }}</div>
         <div class="dep-item-context">Across {{ games_played }} game{% if games_played != 1 %}s{% endif %} logged.</div>
       </div>
     </div>
   </div>
+
+  <!-- ── Per-Game Log ── -->
+  {% if agg.trend %}
+  <div class="section-header">Per-Game Log · 5v5 TOI</div>
+  <div class="stat-card full-width" style="padding: 0; margin-bottom: 10pt;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;">
+      <thead>
+        <tr style="background: #f5f5f5; border-bottom: 1px solid #ddd;">
+          <th style="padding: 5pt 10pt; text-align: left; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555;">Date</th>
+          <th style="padding: 5pt 10pt; text-align: left; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555;">Opponent</th>
+          <th style="padding: 5pt 10pt; text-align: right; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555;">5v5 TOI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in agg.trend %}
+        <tr style="border-bottom: 1px solid #ebebeb;">
+          <td style="padding: 4pt 10pt; color: #444;">{{ g.date }}</td>
+          <td style="padding: 4pt 10pt; color: #444;">{{ g.opponent or '—' }}</td>
+          <td style="padding: 4pt 10pt; text-align: right; color: #1a1a1a; font-weight: 500;">
+            {{ '%.1f'|format(g.toi_5v5) if g.toi_5v5 is not none else '—' }}
+            {% if agg.game_flags and g.game_id|string in agg.game_flags %}
+              {% for f in agg.game_flags[g.game_id|string] %}
+                <span style="margin-left: 6px; padding: 1px 6px; border-radius: 3px; font-size: 8px; font-weight: 700; text-transform: uppercase;
+                             color: {% if f.label == 'reduced role' %}#8a2c2c{% else %}#3a5f8a{% endif %};
+                             background: {% if f.label == 'reduced role' %}rgba(200,100,100,0.12){% else %}rgba(120,160,200,0.12){% endif %};
+                             border: 1px solid {% if f.label == 'reduced role' %}rgba(200,100,100,0.5){% else %}rgba(120,160,200,0.5){% endif %};">
+                  {{ f.label }}
+                </span>
+              {% endfor %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
   <!-- ── Faceoffs (centers only) ── -->
   {% if player.position == 'F' %}
@@ -508,7 +573,7 @@
     <div class="fo-row">
       <div class="fo-item">
         <div class="fo-label">Personal Draw Win%</div>
-        <div class="fo-value">{{ fmt_pct(agg.personal_fo_pct) }}</div>
+        <div class="fo-value">{{ fmt_pct(agg.personal_fo_pct) }}{{ indicator('personal_fo_pct') }}</div>
         <div class="fo-context">Draws taken/won directly by this player.</div>
       </div>
       <div class="fo-item">

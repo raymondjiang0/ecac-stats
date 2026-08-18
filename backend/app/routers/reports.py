@@ -7,6 +7,7 @@ from ..database import get_db
 from ..models import Player, Game, TeamGameStats, PlayerGameStats
 from ..calculations import aggregate_team_stats, aggregate_player_stats
 from ..report_generator import generate_player_report, generate_team_report
+from ..enrichment import enrich_player_agg
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -41,6 +42,20 @@ def player_report(
         .all()
     )
     agg = aggregate_player_stats(player, pgs_rows, games)
+
+    # Build all_aggs so enrichment can compute cohort baselines
+    all_players = db.query(Player).filter_by(active=True).all()
+    all_aggs = []
+    for other in all_players:
+        other_pgs = (
+            db.query(PlayerGameStats)
+            .filter(PlayerGameStats.player_id == other.id,
+                    PlayerGameStats.game_id.in_(game_ids))
+            .all()
+        )
+        other_agg = aggregate_player_stats(other, other_pgs, games)
+        all_aggs.append((other, other_agg))
+    agg = enrich_player_agg(player, agg, all_aggs)
 
     tgs_rows = db.query(TeamGameStats).filter(TeamGameStats.game_id.in_(game_ids)).all()
     team_agg = aggregate_team_stats(tgs_rows, games)
