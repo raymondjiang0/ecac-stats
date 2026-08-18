@@ -75,9 +75,11 @@ def test_player_endpoint_includes_comparisons_and_flags():
     client, TestingSession = _client_with_db()
     try:
         s = TestingSession()
-        players = _seed_full_season(s)
-        center_id = players[0].id
-        s.close()
+        try:
+            players = _seed_full_season(s)
+            center_id = players[0].id
+        finally:
+            s.close()
 
         resp = client.get(f"/api/stats/player/{center_id}")
         assert resp.status_code == 200
