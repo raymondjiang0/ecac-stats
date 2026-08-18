@@ -547,8 +547,8 @@
           <td style="padding: 4pt 10pt; color: #444;">{{ g.opponent or '—' }}</td>
           <td style="padding: 4pt 10pt; text-align: right; color: #1a1a1a; font-weight: 500;">
             {{ '%.1f'|format(g.toi_5v5) if g.toi_5v5 is not none else '—' }}
-            {% if agg.game_flags and g.game_id|string in agg.game_flags %}
-              {% for f in agg.game_flags[g.game_id|string] %}
+            {% if agg.game_flags and g.game_id in agg.game_flags %}
+              {% for f in agg.game_flags[g.game_id] %}
                 <span style="margin-left: 6px; padding: 1px 6px; border-radius: 3px; font-size: 8px; font-weight: 700; text-transform: uppercase;
                              color: {% if f.label == 'reduced role' %}#8a2c2c{% else %}#3a5f8a{% endif %};
                              background: {% if f.label == 'reduced role' %}rgba(200,100,100,0.12){% else %}rgba(120,160,200,0.12){% endif %};
