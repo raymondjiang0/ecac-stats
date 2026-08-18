@@ -301,3 +301,11 @@ def aggregate_player_stats(player, pgs_rows: list, games: list) -> dict:
         "on_ice_fo_pct": pct(fo_wins, fo_losses) if (fo_wins + fo_losses) > 0 else None,
         "trend": trend,
     }
+
+
+def top_flags(flags: list, n: int = 3) -> list:
+    """Return top n flags sorted by |z_score| descending, None z_scores last."""
+    def sort_key(f):
+        z = getattr(f, "z_score", None)
+        return (0 if z is None else 1, abs(z) if z is not None else 0)
+    return sorted(flags, key=sort_key, reverse=True)[:n]
