@@ -4,6 +4,7 @@ import type { Player, PlayerAggStats, Game } from '../types'
 import SmallSampleBadge from '../components/SmallSampleBadge'
 import FlagPanel from '../components/FlagPanel'
 import ComparisonRow from '../components/ComparisonRow'
+import GameFlagBadge from '../components/GameFlagBadge'
 
 function fmt(v: number | null, mult = 100, dec = 1): string {
   if (v === null || v === undefined) return '—'
@@ -324,6 +325,22 @@ export default function ReportsPage() {
                           const cmp = detailAggs[p.id].comparisons?.[key]
                           if (!cmp) return null
                           return <ComparisonRow key={key} label={meta.label} comparison={cmp} unit={meta.unit} />
+                        })}
+                      </div>
+                      <div style={{ marginTop: 24 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
+                          Game Log
+                        </div>
+                        {detailAggs[p.id].trend.map(g => {
+                          const gameFlags = detailAggs[p.id].game_flags?.[g.game_id] ?? []
+                          return (
+                            <div key={g.game_id} style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                              <div style={{ minWidth: 90, color: 'var(--text-secondary)' }}>{g.date}</div>
+                              <div style={{ minWidth: 90 }}>{g.opponent}</div>
+                              <div style={{ minWidth: 60 }}>{g.toi_5v5 !== null ? g.toi_5v5.toFixed(1) + ' min' : '—'}</div>
+                              {gameFlags.map((f, i) => <GameFlagBadge key={i} flag={f} />)}
+                            </div>
+                          )
                         })}
                       </div>
                     </>
