@@ -6,6 +6,7 @@ from typing import Optional
 from ..database import get_db
 from ..models import Player, Game, TeamGameStats, PlayerGameStats
 from ..calculations import aggregate_team_stats, aggregate_player_stats
+from ..enrichment import enrich_player_agg
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -58,7 +59,17 @@ def player_stats(
     games = _filter_games(db, date_from, date_to)
     game_ids = {g.id for g in games}
     pgs_rows = _pgs_for_player_games(db, player_id, game_ids)
-    return aggregate_player_stats(player, pgs_rows, games)
+    agg = aggregate_player_stats(player, pgs_rows, games)
+
+    # Build cohort baselines from all active players over the same window
+    all_players = db.query(Player).filter_by(active=True).all()
+    all_aggs = []
+    for other in all_players:
+        other_pgs = _pgs_for_player_games(db, other.id, game_ids)
+        other_agg = aggregate_player_stats(other, other_pgs, games)
+        all_aggs.append((other, other_agg))
+
+    return enrich_player_agg(player, agg, all_aggs)
 
 
 @router.get("/players/all")

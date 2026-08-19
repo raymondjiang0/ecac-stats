@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getPlayers, getAllPlayerAggStats, getGames, downloadPlayerReport, downloadTeamReport, exportAllData } from '../api/client'
+import { getPlayers, getAllPlayerAggStats, getGames, downloadPlayerReport, downloadTeamReport, exportAllData, getPlayerAggStats } from '../api/client'
 import type { Player, PlayerAggStats, Game } from '../types'
 import SmallSampleBadge from '../components/SmallSampleBadge'
+import FlagPanel from '../components/FlagPanel'
+import ComparisonRow from '../components/ComparisonRow'
+import GameFlagBadge from '../components/GameFlagBadge'
 
 function fmt(v: number | null, mult = 100, dec = 1): string {
   if (v === null || v === undefined) return '—'
@@ -50,6 +53,8 @@ export default function ReportsPage() {
   const [statsLoading, setStatsLoading] = useState(false)
   const [downloading, setDownloading] = useState<number | 'team' | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null)
+  const [detailAggs, setDetailAggs] = useState<Record<number, PlayerAggStats>>({})
 
   // Filter state
   const [preset, setPreset] = useState<Preset>('all')
@@ -81,6 +86,11 @@ export default function ReportsPage() {
     if (!loading) refreshStats()
   }, [loading, dateFrom, dateTo])
 
+  useEffect(() => {
+    setDetailAggs({})
+    setExpandedPlayerId(null)
+  }, [dateFrom, dateTo])
+
   async function downloadPlayer(p: Player) {
     setDownloading(p.id)
     try { await downloadPlayerReport(p.id, p.name, dateFrom, dateTo) }
@@ -93,6 +103,22 @@ export default function ReportsPage() {
     try { await downloadTeamReport(dateFrom, dateTo) }
     catch { alert('PDF generation failed — is the backend running?') }
     finally { setDownloading(null) }
+  }
+
+  async function toggleExpand(playerId: number) {
+    if (expandedPlayerId === playerId) {
+      setExpandedPlayerId(null)
+      return
+    }
+    setExpandedPlayerId(playerId)
+    if (!detailAggs[playerId]) {
+      try {
+        const agg = await getPlayerAggStats(playerId, dateFrom, dateTo)
+        setDetailAggs(prev => ({ ...prev, [playerId]: agg }))
+      } catch {
+        // detail fetch failed silently — panel will render without data
+      }
+    }
   }
 
   if (loading) return <div className="loading">Loading…</div>
@@ -268,14 +294,68 @@ export default function ReportsPage() {
                 </div>
               )}
 
-              <button
-                className="btn btn-primary"
-                onClick={() => downloadPlayer(p)}
-                disabled={downloading === p.id || visibleGames.length === 0}
-                style={{ width: '100%' }}
-              >
-                {downloading === p.id ? 'Generating PDF…' : 'Download Player PDF'}
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => downloadPlayer(p)}
+                  disabled={downloading === p.id || visibleGames.length === 0}
+                  style={{ flex: 1 }}
+                >
+                  {downloading === p.id ? 'Generating PDF…' : 'Download Player PDF'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => toggleExpand(p.id)}
+                  style={{ flexShrink: 0, padding: '0 14px' }}
+                  title={expandedPlayerId === p.id ? 'Collapse detail' : 'Expand detail'}
+                >
+                  {expandedPlayerId === p.id ? '▲' : '▼'}
+                </button>
+              </div>
+
+              {expandedPlayerId === p.id && (
+                <div style={{ marginTop: 12, padding: '16px 0 0 0' }}>
+                  {detailAggs[p.id] ? (
+                    <>
+                      <FlagPanel flags={detailAggs[p.id].flags ?? []} />
+                      <div>
+                        {detailAggs[p.id].comparisons && Object.entries({
+                          toi_5v5:         { label: 'TOI',           unit: 'min'   as const },
+                          cf60:            { label: 'CF60',          unit: 'per60' as const },
+                          ca60:            { label: 'CA60',          unit: 'per60' as const },
+                          on_ice_xgf_pct:  { label: 'xGF%',         unit: 'pct'   as const },
+                          xfsh_pct:        { label: 'xFSh%',        unit: 'pct'   as const },
+                          personal_fo_pct: { label: 'Personal FO%', unit: 'pct'   as const },
+                        }).map(([key, meta]) => {
+                          const cmp = detailAggs[p.id].comparisons?.[key]
+                          if (!cmp) return null
+                          return <ComparisonRow key={key} label={meta.label} comparison={cmp} unit={meta.unit} />
+                        })}
+                      </div>
+                      <div style={{ marginTop: 24 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
+                          Game Log
+                        </div>
+                        {detailAggs[p.id].trend.map(g => {
+                          const gameFlags = detailAggs[p.id].game_flags?.[g.game_id] ?? []
+                          return (
+                            <div key={g.game_id} style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                              <div style={{ minWidth: 90, color: 'var(--text-secondary)' }}>{g.date}</div>
+                              <div style={{ minWidth: 90 }}>{g.opponent}</div>
+                              <div style={{ minWidth: 60 }}>{g.toi_5v5 !== null ? g.toi_5v5.toFixed(1) + ' min' : '—'}</div>
+                              {gameFlags.map((f, i) => <GameFlagBadge key={i} flag={f} />)}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                      Loading detail…
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}

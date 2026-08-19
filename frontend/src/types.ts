@@ -91,6 +91,9 @@ export interface PlayerAggStats {
   personal_fo_pct: number | null
   on_ice_fo_pct: number | null
   trend: PlayerTrendPoint[]
+  comparisons?: Record<string, StatComparison>
+  flags?: PlayerFlag[]
+  game_flags?: Record<number, PlayerFlag[]>
 }
 
 export interface PlayerTrendPoint {
@@ -137,4 +140,30 @@ export interface TrendPoint {
   date: string
   opponent: string
   value: number | null
+}
+
+export interface Baseline {
+  mean: number | null
+  std: number | null
+  n: number
+}
+
+export interface StatComparison {
+  value: number | null
+  cohort: string
+  team_baseline: Baseline
+  position_baseline: Baseline
+  team_delta: number | null
+  position_delta: number | null
+  indicator: 'green' | 'yellow' | 'red' | 'neutral'
+}
+
+export interface PlayerFlag {
+  kind: 'trend' | 'outlier'
+  label: string
+  direction: 'up' | 'down'
+  z_score: number | null
+  window_value: number | null
+  baseline_value: number | null
+  game_id: number | null
 }
