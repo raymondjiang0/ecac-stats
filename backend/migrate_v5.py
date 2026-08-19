@@ -30,8 +30,29 @@ try_add_column("games", "data_source", "TEXT", "'49ing'")
 cur.execute("UPDATE games SET data_source = '49ing' WHERE data_source IS NULL")
 print(f"Backfilled {cur.rowcount} rows with data_source='49ing'.")
 
-# (Tables added by Tasks 3 and 4 will extend this file — see those tasks.)
+# Phase 0: PlayerGameStatsInStat table
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS player_game_stats_instat (
+        id INTEGER PRIMARY KEY,
+        player_id INTEGER NOT NULL REFERENCES players(id),
+        game_id INTEGER NOT NULL REFERENCES games(id),
+        shots INTEGER, shots_on_goal INTEGER, blocked_shots INTEGER,
+        pp_shots INTEGER, pp_shots_on_goal INTEGER,
+        corsi_plus INTEGER, corsi_minus INTEGER,
+        hits_delivered INTEGER, hits_received INTEGER,
+        pb_won_dz INTEGER, pb_total_dz INTEGER,
+        pb_won_oz INTEGER, pb_total_oz INTEGER,
+        pb_won_nz INTEGER, pb_total_nz INTEGER,
+        puck_losses INTEGER, puck_losses_dz INTEGER,
+        puck_recoveries INTEGER, puck_recoveries_oz INTEGER,
+        entries_pass INTEGER, entries_stick INTEGER, entries_dump INTEGER,
+        UNIQUE(player_id, game_id)
+    )
+""")
+print("Created player_game_stats_instat table (or already exists).")
+
+# (Tables added by Task 4 will extend this file — see that task.)
 
 con.commit()
 con.close()
-print("Migration v5 (Task 2 portion) complete.")
+print("Migration v5 complete.")

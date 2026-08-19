@@ -201,3 +201,35 @@ class PlayerAggStats(BaseModel):
     personal_fo_pct: Optional[float]
     on_ice_fo_pct: Optional[float]
     trend: list[PlayerTrendPoint]
+
+
+# ── Player Game Stats (InStat) ────────────────────────────────────────────────
+
+class PlayerGameStatsInStat(BaseModel):
+    id: Optional[int] = None
+    player_id: int
+    game_id: int
+    shots: Optional[int] = None
+    shots_on_goal: Optional[int] = None
+    blocked_shots: Optional[int] = None
+    pp_shots: Optional[int] = None
+    pp_shots_on_goal: Optional[int] = None
+    corsi_plus: Optional[int] = None
+    corsi_minus: Optional[int] = None
+    hits_delivered: Optional[int] = None
+    hits_received: Optional[int] = None
+    pb_won_dz: Optional[int] = None
+    pb_total_dz: Optional[int] = None
+    pb_won_oz: Optional[int] = None
+    pb_total_oz: Optional[int] = None
+    pb_won_nz: Optional[int] = None
+    pb_total_nz: Optional[int] = None
+    puck_losses: Optional[int] = None
+    puck_losses_dz: Optional[int] = None
+    puck_recoveries: Optional[int] = None
+    puck_recoveries_oz: Optional[int] = None
+    entries_pass: Optional[int] = None
+    entries_stick: Optional[int] = None
+    entries_dump: Optional[int] = None
+
+    model_config = {"from_attributes": True}

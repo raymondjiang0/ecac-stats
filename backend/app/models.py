@@ -111,3 +111,50 @@ class PlayerGameStats(Base):
 
     player = relationship("Player", back_populates="game_stats")
     game = relationship("Game", back_populates="player_stats")
+
+
+class PlayerGameStatsInStat(Base):
+    __tablename__ = "player_game_stats_instat"
+
+    id = Column(Integer, primary_key=True, index=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+
+    __table_args__ = (UniqueConstraint("player_id", "game_id"),)
+
+    # Individual shooting (raw counts per game)
+    shots = Column(Integer, nullable=True)
+    shots_on_goal = Column(Integer, nullable=True)
+    blocked_shots = Column(Integer, nullable=True)
+    pp_shots = Column(Integer, nullable=True)
+    pp_shots_on_goal = Column(Integer, nullable=True)
+
+    # On-ice Corsi (raw counts)
+    corsi_plus = Column(Integer, nullable=True)
+    corsi_minus = Column(Integer, nullable=True)
+
+    # Physical
+    hits_delivered = Column(Integer, nullable=True)
+    hits_received = Column(Integer, nullable=True)
+
+    # Puck battles by zone
+    pb_won_dz = Column(Integer, nullable=True)
+    pb_total_dz = Column(Integer, nullable=True)
+    pb_won_oz = Column(Integer, nullable=True)
+    pb_total_oz = Column(Integer, nullable=True)
+    pb_won_nz = Column(Integer, nullable=True)
+    pb_total_nz = Column(Integer, nullable=True)
+
+    # Turnovers / recoveries
+    puck_losses = Column(Integer, nullable=True)
+    puck_losses_dz = Column(Integer, nullable=True)
+    puck_recoveries = Column(Integer, nullable=True)
+    puck_recoveries_oz = Column(Integer, nullable=True)
+
+    # Zone entries
+    entries_pass = Column(Integer, nullable=True)
+    entries_stick = Column(Integer, nullable=True)
+    entries_dump = Column(Integer, nullable=True)
+
+    player = relationship("Player")
+    game = relationship("Game")
