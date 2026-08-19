@@ -1,6 +1,6 @@
 import pytest
 from datetime import date
-from app.models import Game, Player
+from app.models import Game
 
 
 class TestGameDataSource:
