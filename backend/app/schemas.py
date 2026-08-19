@@ -1,6 +1,8 @@
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Literal, Optional
 from datetime import date
+
+DataSource = Literal["49ing", "instat", "both"]
 
 
 # ── Players ──────────────────────────────────────────────────────────────────
@@ -39,6 +41,7 @@ class GameCreate(BaseModel):
     opponent: str
     is_home: bool
     season: str = "2025-26"
+    data_source: DataSource = "49ing"
     notes: Optional[str] = None
 
 
@@ -47,6 +50,7 @@ class GameUpdate(BaseModel):
     opponent: Optional[str] = None
     is_home: Optional[bool] = None
     season: Optional[str] = None
+    data_source: Optional[DataSource] = None
     notes: Optional[str] = None
 
 
@@ -56,6 +60,7 @@ class GameOut(BaseModel):
     opponent: str
     is_home: bool
     season: str
+    data_source: DataSource
     notes: Optional[str]
 
     model_config = {"from_attributes": True}

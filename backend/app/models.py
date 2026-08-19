@@ -24,6 +24,8 @@ class Game(Base):
     opponent = Column(String, nullable=False)
     is_home = Column(Boolean, nullable=False)
     season = Column(String, nullable=False, default="2025-26")
+    data_source = Column(String, nullable=False, default="49ing")
+    # values: "49ing" | "instat" | "both" (SQLite does not enforce enum; validated at API layer)
     notes = Column(Text, nullable=True)
 
     team_stats = relationship("TeamGameStats", back_populates="game", uselist=False, cascade="all, delete-orphan")
