@@ -1,4 +1,5 @@
 import SmallSampleBadge from './SmallSampleBadge'
+import type { StatAvailability } from '../types'
 
 interface Props {
   label: string
@@ -11,6 +12,7 @@ interface Props {
   gamesPlayed?: number
   trend?: (number | null)[]
   trendLabel?: string
+  availability?: StatAvailability
 }
 
 function Sparkline({ values }: { values: (number | null)[] }) {
@@ -42,7 +44,7 @@ function Sparkline({ values }: { values: (number | null)[] }) {
 
 export default function StatCard({
   label, sublabel, primary, secondary, context,
-  vsTeam, smallSample, gamesPlayed = 0, trend, trendLabel,
+  vsTeam, smallSample, gamesPlayed = 0, trend, trendLabel, availability,
 }: Props) {
   return (
     <div className="card" style={{ borderTop: '3px solid var(--crimson)', padding: '14px 16px' }}>
@@ -51,9 +53,12 @@ export default function StatCard({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 28, fontWeight: 700, color: primary === '—' ? 'var(--text-secondary)' : 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-          {primary}
-        </span>
+        {availability && availability.games === 0
+          ? <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1 }} title={`Source ${availability.sources.join(', ') || 'unavailable'} for this window`}>N/A</span>
+          : <span style={{ fontSize: 28, fontWeight: 700, color: primary === '—' ? 'var(--text-secondary)' : 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {primary}
+            </span>
+        }
         {secondary && (
           <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
             {secondary}
