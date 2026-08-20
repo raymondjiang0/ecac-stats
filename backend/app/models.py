@@ -158,3 +158,28 @@ class PlayerGameStatsInStat(Base):
 
     player = relationship("Player")
     game = relationship("Game")
+
+
+class TeamGameStatsInStat(Base):
+    __tablename__ = "team_game_stats_instat"
+
+    id = Column(Integer, primary_key=True, index=True)
+    game_id = Column(Integer, ForeignKey("games.id"), unique=True, nullable=False)
+
+    # Special teams detail
+    pp_shots = Column(Integer, nullable=True)
+    pp_time_seconds_in_oz = Column(Integer, nullable=True)
+    pp_time_seconds_total = Column(Integer, nullable=True)
+    pk_opp_breakouts = Column(Integer, nullable=True)
+    pp_opp_breakouts_allowed = Column(Integer, nullable=True)
+
+    # Puck possession (5v5)
+    puck_possession_seconds_total = Column(Integer, nullable=True)
+    oz_possession_seconds = Column(Integer, nullable=True)
+    oz_possession_pct = Column(Float, nullable=True)
+
+    # Team-level shot quality
+    scoring_chance_shots = Column(Integer, nullable=True)
+    scoring_chance_shots_on_goal = Column(Integer, nullable=True)
+
+    game = relationship("Game")

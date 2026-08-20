@@ -51,7 +51,24 @@ cur.execute("""
 """)
 print("Created player_game_stats_instat table (or already exists).")
 
-# (Tables added by Task 4 will extend this file — see that task.)
+# Phase 0: TeamGameStatsInStat table
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS team_game_stats_instat (
+        id INTEGER PRIMARY KEY,
+        game_id INTEGER NOT NULL UNIQUE REFERENCES games(id),
+        pp_shots INTEGER,
+        pp_time_seconds_in_oz INTEGER,
+        pp_time_seconds_total INTEGER,
+        pk_opp_breakouts INTEGER,
+        pp_opp_breakouts_allowed INTEGER,
+        puck_possession_seconds_total INTEGER,
+        oz_possession_seconds INTEGER,
+        oz_possession_pct REAL,
+        scoring_chance_shots INTEGER,
+        scoring_chance_shots_on_goal INTEGER
+    )
+""")
+print("Created team_game_stats_instat table (or already exists).")
 
 con.commit()
 con.close()

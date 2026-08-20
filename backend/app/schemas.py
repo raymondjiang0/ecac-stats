@@ -233,3 +233,22 @@ class PlayerGameStatsInStat(BaseModel):
     entries_dump: Optional[int] = None
 
     model_config = {"from_attributes": True}
+
+
+# ── Team Game Stats (InStat) ──────────────────────────────────────────────────
+
+class TeamGameStatsInStat(BaseModel):
+    id: Optional[int] = None
+    game_id: int
+    pp_shots: Optional[int] = None
+    pp_time_seconds_in_oz: Optional[int] = None
+    pp_time_seconds_total: Optional[int] = None
+    pk_opp_breakouts: Optional[int] = None
+    pp_opp_breakouts_allowed: Optional[int] = None
+    puck_possession_seconds_total: Optional[int] = None
+    oz_possession_seconds: Optional[int] = None
+    oz_possession_pct: Optional[float] = None
+    scoring_chance_shots: Optional[int] = None
+    scoring_chance_shots_on_goal: Optional[int] = None
+
+    model_config = {"from_attributes": True}
