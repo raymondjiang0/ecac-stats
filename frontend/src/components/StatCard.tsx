@@ -46,6 +46,7 @@ export default function StatCard({
   label, sublabel, primary, secondary, context,
   vsTeam, smallSample, gamesPlayed = 0, trend, trendLabel, availability,
 }: Props) {
+  const isNA = availability?.games === 0
   return (
     <div className="card" style={{ borderTop: '3px solid var(--crimson)', padding: '14px 16px' }}>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
@@ -53,24 +54,17 @@ export default function StatCard({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-        {(() => {
-          const isNA = availability?.games === 0
-          return (
-            <>
-              {isNA
-                ? <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1 }} title={`Source ${availability!.sources.join(', ') || 'unavailable'} for this window`}>N/A</span>
-                : <span style={{ fontSize: 28, fontWeight: 700, color: primary === '—' ? 'var(--text-secondary)' : 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                    {primary}
-                  </span>
-              }
-              {!isNA && secondary && (
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                  {secondary}
-                </span>
-              )}
-            </>
-          )
-        })()}
+        {isNA
+          ? <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1 }} title={`Source ${availability!.sources.join(', ') || 'unavailable'} for this window`}>N/A</span>
+          : <span style={{ fontSize: 28, fontWeight: 700, color: primary === '—' ? 'var(--text-secondary)' : 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {primary}
+            </span>
+        }
+        {!isNA && secondary && (
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
+            {secondary}
+          </span>
+        )}
       </div>
 
       {sublabel && (
@@ -85,7 +79,7 @@ export default function StatCard({
         </div>
       )}
 
-      {vsTeam && (
+      {!isNA && vsTeam && (
         <div style={{ marginTop: 6 }}>
           <span
             className={`stat-pill ${vsTeam.diff > 0.005 ? 'positive' : vsTeam.diff < -0.005 ? 'negative' : 'neutral'}`}
@@ -95,15 +89,15 @@ export default function StatCard({
         </div>
       )}
 
-      {trend && <Sparkline values={trend} />}
+      {!isNA && trend && <Sparkline values={trend} />}
 
-      {trendLabel && (
+      {!isNA && trendLabel && (
         <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4, fontStyle: 'italic' }}>
           {trendLabel}
         </div>
       )}
 
-      {smallSample && (
+      {!isNA && smallSample && (
         <div style={{ marginTop: 8 }}>
           <SmallSampleBadge n={gamesPlayed} />
         </div>

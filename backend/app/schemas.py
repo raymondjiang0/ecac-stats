@@ -138,6 +138,13 @@ class PlayerGameStatsOut(PlayerGameStatsCreate):
 
 # ── Computed Stats ────────────────────────────────────────────────────────────
 
+class StatAvailabilitySchema(BaseModel):
+    games: int
+    sources: list[str]
+
+    model_config = {"from_attributes": True}
+
+
 class TeamAggStats(BaseModel):
     games_logged: int
     cf_pct: Optional[float]
@@ -155,6 +162,7 @@ class TeamAggStats(BaseModel):
     # Per-game trend for CF% and xGF%
     cf_pct_trend: list
     xgf_pct_trend: list
+    availability: Optional[dict[str, StatAvailabilitySchema]] = None
 
 
 class PlayerTrendPoint(BaseModel):
@@ -201,6 +209,7 @@ class PlayerAggStats(BaseModel):
     personal_fo_pct: Optional[float]
     on_ice_fo_pct: Optional[float]
     trend: list[PlayerTrendPoint]
+    availability: Optional[dict[str, StatAvailabilitySchema]] = None
 
 
 # ── Player Game Stats (InStat) ────────────────────────────────────────────────

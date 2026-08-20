@@ -4,6 +4,17 @@ from datetime import date
 from .stat_sources import STAT_SOURCES, games_with_stat
 
 
+def _sources_for(g_source: str, declared: set) -> set:
+    """Compute which source label(s) apply for a single game and stat.
+
+    A game tagged "both" supplies data from either source; intersect with
+    the stat's declared set so we label only what is actually used.
+    """
+    if g_source == "both":
+        return {"49ing", "instat"} & declared
+    return {g_source} & declared
+
+
 def _availability_for(games: list, stat_keys: list, rows_by_game_id: dict) -> dict:
     """Build the per-stat availability metadata block.
 
@@ -19,11 +30,13 @@ def _availability_for(games: list, stat_keys: list, rows_by_game_id: dict) -> di
         # rows exist for backfilled games; we still count them because the
         # user entered them as 49ing games, i.e. data intentionally missing is
         # different from source-unsupported).
-        eligible_ids = {g.id for g in eligible}
-        counted = sum(1 for gid in eligible_ids if gid in rows_by_game_id)
-        sources = sorted({g.data_source if g.data_source != "both" else "49ing"
-                          for g in eligible if g.id in rows_by_game_id})
-        out[key] = {"games": counted, "sources": sources}
+        eligible_with_rows = [g for g in eligible if g.id in rows_by_game_id]
+        counted = len(eligible_with_rows)
+        declared = STAT_SOURCES.get(key, set())
+        sources_seen: set = set()
+        for g in eligible_with_rows:
+            sources_seen |= _sources_for(g.data_source, declared)
+        out[key] = {"games": counted, "sources": sorted(sources_seen)}
     return out
 
 
