@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type {
-  Player, Game, TeamGameStats,
+  Player, Game, GameCreate, TeamGameStats,
   PlayerGameStats, PlayerAggStats, TeamAggStats,
 } from '../types'
 
@@ -14,7 +14,7 @@ export const deletePlayer = (id: number) => api.delete(`/players/${id}`)
 
 // Games
 export const getGames = () => api.get<Game[]>('/games').then(r => r.data)
-export const createGame = (data: Omit<Game, 'id'>) => api.post<Game>('/games', data).then(r => r.data)
+export const createGame = (data: GameCreate) => api.post<Game>('/games', data).then(r => r.data)
 export const getGame = (id: number) => api.get<Game>(`/games/${id}`).then(r => r.data)
 export const updateGame = (id: number, data: Partial<Game>) => api.put<Game>(`/games/${id}`, data).then(r => r.data)
 export const deleteGame = (id: number) => api.delete(`/games/${id}`)

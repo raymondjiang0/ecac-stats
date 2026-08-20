@@ -53,17 +53,24 @@ export default function StatCard({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-        {availability && availability.games === 0
-          ? <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1 }} title={`Source ${availability.sources.join(', ') || 'unavailable'} for this window`}>N/A</span>
-          : <span style={{ fontSize: 28, fontWeight: 700, color: primary === '—' ? 'var(--text-secondary)' : 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {primary}
-            </span>
-        }
-        {secondary && (
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
-            {secondary}
-          </span>
-        )}
+        {(() => {
+          const isNA = availability?.games === 0
+          return (
+            <>
+              {isNA
+                ? <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1 }} title={`Source ${availability!.sources.join(', ') || 'unavailable'} for this window`}>N/A</span>
+                : <span style={{ fontSize: 28, fontWeight: 700, color: primary === '—' ? 'var(--text-secondary)' : 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                    {primary}
+                  </span>
+              }
+              {!isNA && secondary && (
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                  {secondary}
+                </span>
+              )}
+            </>
+          )
+        })()}
       </div>
 
       {sublabel && (

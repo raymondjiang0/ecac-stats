@@ -14,8 +14,10 @@ export interface Game {
   is_home: boolean
   season: string
   notes: string | null
-  data_source?: '49ing' | 'instat' | 'both'
+  data_source: '49ing' | 'instat' | 'both'
 }
+
+export type GameCreate = Omit<Game, 'id' | 'data_source'>
 
 export interface TeamGameStats {
   game_id: number
