@@ -1,6 +1,31 @@
 from typing import Optional
 from datetime import date
 
+from .stat_sources import STAT_SOURCES, games_with_stat
+
+
+def _availability_for(games: list, stat_keys: list, rows_by_game_id: dict) -> dict:
+    """Build the per-stat availability metadata block.
+
+    games: the game set for the window (filtered by date range at the router).
+    stat_keys: which stat_keys to report on.
+    rows_by_game_id: mapping game_id → row (the data-holding row; PlayerGameStats
+    for player aggregation, TeamGameStats for team). Presence indicates a row exists.
+    """
+    out = {}
+    for key in stat_keys:
+        eligible = games_with_stat(games, key)
+        # Restrict to games that actually have a data row loaded (empty stats
+        # rows exist for backfilled games; we still count them because the
+        # user entered them as 49ing games, i.e. data intentionally missing is
+        # different from source-unsupported).
+        eligible_ids = {g.id for g in eligible}
+        counted = sum(1 for gid in eligible_ids if gid in rows_by_game_id)
+        sources = sorted({g.data_source if g.data_source != "both" else "49ing"
+                          for g in eligible if g.id in rows_by_game_id})
+        out[key] = {"games": counted, "sources": sources}
+    return out
+
 
 def safe_div(numerator: Optional[float], denominator: Optional[float]) -> Optional[float]:
     if numerator is None or denominator is None:
@@ -80,8 +105,16 @@ def attack_scenario_shares(tgs) -> dict:
 
 def aggregate_team_stats(team_stats_rows: list, games: list) -> dict:
     """Aggregate TeamGameStats rows across all games into season totals."""
+    team_stat_keys = [
+        "cf_pct", "xgf_pct", "xgf60", "xga60",
+        "pp_cf_pct", "pp_xgf_pct", "pk_cf_pct", "pk_xgf_pct",
+        "rush_share", "oz_fc_share", "oz_fo_share", "sust_pos_share",
+    ]
     if not team_stats_rows:
-        return _empty_team_agg()
+        result = _empty_team_agg()
+        rows_by_game_id: dict = {}
+        result["availability"] = _availability_for(games, team_stat_keys, rows_by_game_id)
+        return result
 
     cf_for = cf_ag = ff_for = ff_ag = xgf = xga = toi = 0.0
     cf_for_5v4 = cf_ag_5v4 = xgf_5v4 = xga_5v4 = 0.0
@@ -135,7 +168,7 @@ def aggregate_team_stats(team_stats_rows: list, games: list) -> dict:
 
     total_attack = rush_f + fc_f + fo_f + sp_f
 
-    return {
+    result = {
         "games_logged": len(team_stats_rows),
         "cf_pct": pct(cf_for, cf_ag),
         "xgf_pct": pct(xgf, xga),
@@ -152,6 +185,9 @@ def aggregate_team_stats(team_stats_rows: list, games: list) -> dict:
         "cf_pct_trend": cf_pct_trend,
         "xgf_pct_trend": xgf_pct_trend,
     }
+    rows_by_game_id = {r.game_id: r for r in team_stats_rows}
+    result["availability"] = _availability_for(games, team_stat_keys, rows_by_game_id)
+    return result
 
 
 def _empty_team_agg() -> dict:
@@ -199,13 +235,19 @@ def player_game_stats(pgs, game) -> dict:
 
 def aggregate_player_stats(player, pgs_rows: list, games: list) -> dict:
     """Aggregate PlayerGameStats rows into season totals + per-game trend."""
+    player_stat_keys = [
+        "toi_5v5", "on_ice_cf_pct", "on_ice_xgf_pct", "on_ice_sf_pct",
+        "cf60", "ca60", "ff60", "fa60", "sf60", "sa60",
+        "xfsh_pct", "xfsv_pct", "icf", "isf",
+        "median_shift_seconds", "personal_fo_pct", "on_ice_fo_pct",
+    ]
     game_map = {g.id: g for g in games}
     games_with_toi = [r for r in pgs_rows if r.toi_5v5 and r.toi_5v5 > 0]
     games_played = len(games_with_toi)
     small_sample = games_played < 5
 
     if not games_with_toi:
-        return {
+        result = {
             "player_id": player.id,
             "player_name": player.name,
             "games_played": 0,
@@ -220,6 +262,9 @@ def aggregate_player_stats(player, pgs_rows: list, games: list) -> dict:
             "personal_fo_pct": None, "on_ice_fo_pct": None,
             "trend": [],
         }
+        rows_by_game_id = {r.game_id: r for r in pgs_rows}
+        result["availability"] = _availability_for(games, player_stat_keys, rows_by_game_id)
+        return result
 
     # Accumulate per-60 × TOI so season per-60 = sum / total_toi (TOI-weighted avg)
     cf_w = ca_w = ff_w = fa_w = sf_w = sa_w = xgf_w = xga_w = toi = 0.0
@@ -277,7 +322,7 @@ def aggregate_player_stats(player, pgs_rows: list, games: list) -> dict:
     xfsv_raw = safe_div(xga_w, fa_w)
     xfsv = (1 - xfsv_raw) if xfsv_raw is not None else None
 
-    return {
+    result = {
         "player_id": player.id,
         "player_name": player.name,
         "games_played": games_played,
@@ -301,6 +346,9 @@ def aggregate_player_stats(player, pgs_rows: list, games: list) -> dict:
         "on_ice_fo_pct": pct(fo_wins, fo_losses) if (fo_wins + fo_losses) > 0 else None,
         "trend": trend,
     }
+    rows_by_game_id = {r.game_id: r for r in pgs_rows}
+    result["availability"] = _availability_for(games, player_stat_keys, rows_by_game_id)
+    return result
 
 
 def top_flags(flags: list, n: int = 3) -> list:
