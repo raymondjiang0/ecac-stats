@@ -14,7 +14,10 @@ export interface Game {
   is_home: boolean
   season: string
   notes: string | null
+  data_source: '49ing' | 'instat' | 'both'
 }
+
+export type GameCreate = Omit<Game, 'id' | 'data_source'>
 
 export interface TeamGameStats {
   game_id: number
@@ -94,6 +97,7 @@ export interface PlayerAggStats {
   comparisons?: Record<string, StatComparison>
   flags?: PlayerFlag[]
   game_flags?: Record<number, PlayerFlag[]>
+  availability?: Record<string, StatAvailability>
 }
 
 export interface PlayerTrendPoint {
@@ -133,6 +137,7 @@ export interface TeamAggStats {
   sust_pos_share: number | null
   cf_pct_trend: TrendPoint[]
   xgf_pct_trend: TrendPoint[]
+  availability?: Record<string, StatAvailability>
 }
 
 export interface TrendPoint {
@@ -140,6 +145,11 @@ export interface TrendPoint {
   date: string
   opponent: string
   value: number | null
+}
+
+export interface StatAvailability {
+  games: number
+  sources: string[]
 }
 
 export interface Baseline {

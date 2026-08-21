@@ -1,6 +1,8 @@
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Literal, Optional
 from datetime import date
+
+DataSource = Literal["49ing", "instat", "both"]
 
 
 # ── Players ──────────────────────────────────────────────────────────────────
@@ -39,6 +41,7 @@ class GameCreate(BaseModel):
     opponent: str
     is_home: bool
     season: str = "2025-26"
+    data_source: DataSource = "49ing"
     notes: Optional[str] = None
 
 
@@ -47,6 +50,7 @@ class GameUpdate(BaseModel):
     opponent: Optional[str] = None
     is_home: Optional[bool] = None
     season: Optional[str] = None
+    data_source: Optional[DataSource] = None
     notes: Optional[str] = None
 
 
@@ -56,6 +60,7 @@ class GameOut(BaseModel):
     opponent: str
     is_home: bool
     season: str
+    data_source: DataSource
     notes: Optional[str]
 
     model_config = {"from_attributes": True}
@@ -133,6 +138,13 @@ class PlayerGameStatsOut(PlayerGameStatsCreate):
 
 # ── Computed Stats ────────────────────────────────────────────────────────────
 
+class StatAvailabilitySchema(BaseModel):
+    games: int
+    sources: list[str]
+
+    model_config = {"from_attributes": True}
+
+
 class TeamAggStats(BaseModel):
     games_logged: int
     cf_pct: Optional[float]
@@ -150,6 +162,7 @@ class TeamAggStats(BaseModel):
     # Per-game trend for CF% and xGF%
     cf_pct_trend: list
     xgf_pct_trend: list
+    availability: Optional[dict[str, StatAvailabilitySchema]] = None
 
 
 class PlayerTrendPoint(BaseModel):
@@ -196,3 +209,55 @@ class PlayerAggStats(BaseModel):
     personal_fo_pct: Optional[float]
     on_ice_fo_pct: Optional[float]
     trend: list[PlayerTrendPoint]
+    availability: Optional[dict[str, StatAvailabilitySchema]] = None
+
+
+# ── Player Game Stats (InStat) ────────────────────────────────────────────────
+
+class PlayerGameStatsInStat(BaseModel):
+    id: Optional[int] = None
+    player_id: int
+    game_id: int
+    shots: Optional[int] = None
+    shots_on_goal: Optional[int] = None
+    blocked_shots: Optional[int] = None
+    pp_shots: Optional[int] = None
+    pp_shots_on_goal: Optional[int] = None
+    corsi_plus: Optional[int] = None
+    corsi_minus: Optional[int] = None
+    hits_delivered: Optional[int] = None
+    hits_received: Optional[int] = None
+    pb_won_dz: Optional[int] = None
+    pb_total_dz: Optional[int] = None
+    pb_won_oz: Optional[int] = None
+    pb_total_oz: Optional[int] = None
+    pb_won_nz: Optional[int] = None
+    pb_total_nz: Optional[int] = None
+    puck_losses: Optional[int] = None
+    puck_losses_dz: Optional[int] = None
+    puck_recoveries: Optional[int] = None
+    puck_recoveries_oz: Optional[int] = None
+    entries_pass: Optional[int] = None
+    entries_stick: Optional[int] = None
+    entries_dump: Optional[int] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ── Team Game Stats (InStat) ──────────────────────────────────────────────────
+
+class TeamGameStatsInStat(BaseModel):
+    id: Optional[int] = None
+    game_id: int
+    pp_shots: Optional[int] = None
+    pp_time_seconds_in_oz: Optional[int] = None
+    pp_time_seconds_total: Optional[int] = None
+    pk_opp_breakouts: Optional[int] = None
+    pp_opp_breakouts_allowed: Optional[int] = None
+    puck_possession_seconds_total: Optional[int] = None
+    oz_possession_seconds: Optional[int] = None
+    oz_possession_pct: Optional[float] = None
+    scoring_chance_shots: Optional[int] = None
+    scoring_chance_shots_on_goal: Optional[int] = None
+
+    model_config = {"from_attributes": True}
