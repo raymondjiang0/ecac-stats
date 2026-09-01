@@ -43,6 +43,11 @@ class TestFindSectionPage:
     def test_returns_none_when_team_not_found(self, pdf):
         assert find_section_page(pdf, PLAYERS_STATS_SECTION, "NONEXISTENT TEAM") is None
 
+    def test_match_wide_section_ignores_team_parameter(self, pdf):
+        # For match-wide sections (TEAMS STATS), team parameter is ignored;
+        # even with a nonexistent team, the section should still be found
+        assert find_section_page(pdf, TEAMS_STATS_SECTION, "NONEXISTENT TEAM") == 1
+
 
 class TestFindOurTeamSectionPage:
     def test_defaults_to_our_team_name(self, pdf):

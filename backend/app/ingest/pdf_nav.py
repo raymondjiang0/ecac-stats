@@ -51,7 +51,9 @@ def find_section_page(
             if team in line:
                 return i
 
-    # Second pass: check remaining lines (for edge cases)
+    # Second pass: rescan every page (not just those pass 1 skipped) on
+    # the remaining lines. Kept simple over incremental tracking — 19 pages
+    # is negligible.
     for i, page in enumerate(pdf.pages):
         text = page.extract_text() or ""
         lines = text.splitlines()[:5]
@@ -59,6 +61,9 @@ def find_section_page(
             if line_idx == 1:  # Skip line 1 (already checked)
                 continue
             if section not in line:
+                continue
+            # For match-wide sections, skip the cover page (page 0)
+            if is_match_wide and i == 0:
                 continue
             if is_match_wide:
                 return i
