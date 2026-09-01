@@ -16,16 +16,15 @@ once for zone entries.
 
 Returns a list of dicts, one per player, each with a jersey/name and any
 PlayerGameStatsInStat main fields the parser could extract.
+
+NOTE: `player_name` contains the player's last name only, as it appears in
+the PDF — full names must be looked up via `jersey_number` against the roster.
 """
 from typing import Optional
 import re
 import pdfplumber
 from ..pdf_nav import find_section_page, PLAYERS_STATS_SECTION
 from .team_stats import _parse_int  # reuse int-with-em-dash helper
-
-# Regex to identify player data lines in the main stats section:
-# Starts with 1-2 digit jersey number, space, Last Name (capitalized), space, number (InStat index)
-_MAIN_ROW_RE = re.compile(r"^\d{1,2}\s+[A-Z][a-z]+\s+\d+\s")
 
 
 def parse_players_main(pdf: pdfplumber.PDF, our_team: str) -> list[dict]:
@@ -116,7 +115,7 @@ def _parse_main_stats_line(line: str) -> Optional[dict]:
     # Must start with jersey (digits) and name (capitalized word)
     if not re.match(r"^\d{1,2}$", tokens[0]):
         return None
-    if not re.match(r"^[A-Z][a-z]", tokens[1]):
+    if not re.match(r"^[A-Z][A-Za-z'\-]+$", tokens[1]):
         return None
     # Third token must be InStat index (integer)
     if not re.match(r"^\d+$", tokens[2]):

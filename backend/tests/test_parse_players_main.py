@@ -1,7 +1,7 @@
 import os
 import pytest
 import pdfplumber
-from app.ingest.parsers.players_main import parse_players_main
+from app.ingest.parsers.players_main import parse_players_main, _parse_main_stats_line
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "instat_sample.pdf")
 
@@ -56,3 +56,14 @@ class TestParsePlayersMain:
     def test_returns_empty_for_unknown_team(self, pdf):
         rows = parse_players_main(pdf, our_team="NONEXISTENT TEAM")
         assert rows == []
+
+    def test_apostrophe_name_not_silently_skipped(self):
+        # Regression: names like O'Leary were dropped because the old guard
+        # required ^[A-Z][a-z], failing on the apostrophe after the capital.
+        # Construct a synthetic main-stats line with O'Leary as the name token.
+        # Format: jersey name instat_idx goals assists points +/- TOI:MM shifts PPtime SHtime penalty shots/sog pct pp_shots corsi+ corsi- corsi_total hits_del hits_recv
+        line = "17 O'Leary 123 0 1 1 0 12:34 15 2:00 0:00 2:00 3/2 66.7% 1/1 5 -3 2 2 1"
+        row = _parse_main_stats_line(line)
+        assert row is not None, "O'Leary should not be silently skipped"
+        assert row["player_name"] == "O'Leary"
+        assert row["jersey_number"] == "17"
