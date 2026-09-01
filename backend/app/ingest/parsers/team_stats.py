@@ -45,13 +45,12 @@ def parse_team_stats(pdf: pdfplumber.PDF, our_team: str) -> dict:
 
     page = pdf.pages[page_idx]
     text = page.extract_text() or ""
-    tables = page.extract_tables() or []
-    _populate_from_page(result, text, tables, our_team)
+    _populate_from_page(result, text, our_team)
     return result
 
 
 def _populate_from_page(
-    result: dict, text: str, tables: list, our_team: str
+    result: dict, text: str, our_team: str
 ) -> None:
     """Walk the page's text lines filling result dict fields.
 
@@ -65,26 +64,34 @@ def _populate_from_page(
     other breakouts rows, we track whether we've passed the "Short-handed
     play" header line.
     """
-    abbrev = _team_abbrev(our_team)
+    our_abbrev = _team_abbrev(our_team)
     lines = text.splitlines()
 
     # Determine column index (0=first/visiting, 1=second/our) by finding
-    # the header row "PT HC" and locating our abbreviation.
+    # the header row that begins with a 2-letter team abbreviation pair
+    # (e.g. "PT HC PT HC ...") and locating our team's abbreviation in it.
     our_col = 1  # default: our team is the second value in each pair
+    _ABBREV_RE = re.compile(r"^[A-Z]{2}$")
     for line in lines:
         tokens = line.strip().split()
-        if len(tokens) >= 2 and tokens[0] in ("PT", "HC", "HU") and tokens[1] in ("PT", "HC", "HU"):
-            try:
-                our_col = tokens.index(abbrev)
-            except ValueError:
-                our_col = 1
+        if len(tokens) >= 2 and _ABBREV_RE.match(tokens[0]) and _ABBREV_RE.match(tokens[1]):
+            found_our_col = False
+            for tok_idx, tok in enumerate(tokens[:2]):
+                if tok == our_abbrev:
+                    our_col = tok_idx
+                    found_our_col = True
+                    break
+            if not found_our_col:
+                import warnings
+                warnings.warn(
+                    f"team_stats: abbreviation '{our_abbrev}' not found in header "
+                    f"row tokens {tokens[:2]!r}; defaulting to our_col=1",
+                    stacklevel=2,
+                )
             break
 
     # Track context: have we passed the short-handed section header?
     in_sh_section = False
-    pp_breakouts_found = False
-
-    TIME_RE = re.compile(r"^\d+:\d{2}$")
 
     for line in lines:
         stripped = line.strip()
@@ -132,12 +139,14 @@ def _populate_from_page(
             result["pp_opp_breakouts_allowed"] = _parse_int(vals[our_col])
 
         # --- pk_opp_breakouts ---
-        # "Breakouts 6 2"  (appears at end of SHOTS/ON GOAL BY ZONES header line)
-        # Pattern: "Breakouts <n> <n>" — can be embedded at end of a line
-        m = re.search(r"Breakouts\s+(\d+)\s+(\d+)\s*$", stripped)
-        if m:
-            vals = [m.group(1), m.group(2)]
-            result["pk_opp_breakouts"] = _parse_int(vals[our_col])
+        # "Breakouts 6 2"  (in short-handed section; may be at end of a longer line)
+        # Gate on in_sh_section to avoid false-matching a "PP Breakouts" row if
+        # InStat ever reorders lines — both rows share the same "Breakouts N N" shape.
+        if in_sh_section:
+            m = re.search(r"Breakouts\s+(\d+)\s+(\d+)\s*$", stripped)
+            if m:
+                vals = [m.group(1), m.group(2)]
+                result["pk_opp_breakouts"] = _parse_int(vals[our_col])
 
         # --- puck_possession_seconds_total ---
         # "Puck possessions 19:57 16:20 Puck possessions 91 90 ..."
@@ -204,7 +213,16 @@ def _parse_time_to_seconds(s: str) -> Optional[int]:
 
 
 def _parse_pct(s: str) -> Optional[float]:
-    """Parse '50%' or '0.50' to 0.5."""
+    """Parse a percentage string to a fraction in [0, 1].
+
+    Accepts '39%' (-> 0.39), '0.39' (-> 0.39, already-normalized), or '—' (-> None).
+    Values > 1.0 are interpreted as percentages and divided by 100;
+    values in [0, 1] are treated as already-normalized fractions.
+
+    Callers reading raw percentages from PDF text should pass the '%'
+    suffix to disambiguate integer inputs like '1' (which would otherwise
+    be misread as 0.01 rather than 1.0).
+    """
     if not s or s.strip() == "\u2014":
         return None
     s = s.strip().rstrip("%")
