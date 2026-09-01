@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, Float, String, Boolean, Date, Text, UniqueConstraint, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, Integer, Float, String, Boolean, Date, DateTime, Text, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -183,3 +184,44 @@ class TeamGameStatsInStat(Base):
     scoring_chance_shots_on_goal = Column(Integer, nullable=True)
 
     game = relationship("Game")
+
+
+class IngestRun(Base):
+    __tablename__ = "ingest_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    parsed_json = Column(Text, nullable=False)
+    status = Column(String, nullable=False, default="pending_review")
+    # values: "pending_review" | "committed" | "discarded" | "failed"
+    committed_at = Column(DateTime, nullable=True)
+    error = Column(Text, nullable=True)
+
+    game = relationship("Game")
+
+
+class PlayerHitMatrix(Base):
+    __tablename__ = "player_hit_matrix"
+
+    id = Column(Integer, primary_key=True, index=True)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+    from_player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    to_player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    delivered = Column(Integer, nullable=False, default=0)
+    received = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (UniqueConstraint("game_id", "from_player_id", "to_player_id"),)
+
+
+class PlayerPassMatrix(Base):
+    __tablename__ = "player_pass_matrix"
+
+    id = Column(Integer, primary_key=True, index=True)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+    from_player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    to_player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    count = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (UniqueConstraint("game_id", "from_player_id", "to_player_id"),)
