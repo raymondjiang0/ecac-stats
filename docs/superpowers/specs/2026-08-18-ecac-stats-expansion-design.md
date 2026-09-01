@@ -1,8 +1,10 @@
 # ECAC Stats Expansion — Design Spec
 
-**Date:** 2026-08-18
+**Date:** 2026-08-18 (amended 2026-09-01)
 **Author:** Raymond Jiang (w/ Claude)
 **Status:** Approved for planning
+
+**2026-09-01 amendment:** Phase 2 ingest is descoped to InStat-PDF-only (no Claude vision, no paid API dependencies — this is a free tool). `PlayerPassMatrix` and `PlayerHitMatrix` tables move from Phase 5 into Phase 2 (PDF parsing extracts them at no marginal cost). Review UI simplified to editable form (no split-screen PDF preview). See §4 for revised ingest design.
 
 ---
 
@@ -13,7 +15,7 @@ The current tool tracks 5 team stats and 4 player stats sourced from 49ing's Dat
 This spec covers:
 
 1. Adopting InStat as a second, coexisting data source (schema-level).
-2. Building an automated ingest pipeline for both PDFs (InStat) and screenshots (either platform), with Claude vision as the extractor for images.
+2. Building an automated ingest pipeline that parses InStat match-report PDFs (deterministic `pdfplumber` — no external services, no cost). 49ing data stays manual.
 3. Rolling out ~15 new stats across three tiers, plus one auto-flag layer for coach-visible anomalies.
 4. Explicitly documenting what is not possible with either data source (with reasons).
 
@@ -136,12 +138,14 @@ When `data_source == "both"`, 49ing values win for overlapping fields. This is a
 
 **Estimated effort:** 3–4 days.
 
-### Deferred to Phase 2 (post-ingest)
+### Matrix tables (added in Phase 2)
 
-- `PlayerPassMatrix` — per-game, per-player-pair pass counts (from InStat page 10/18).
-- `PlayerHitMatrix` — per-game, per-player-pair hit counts (InStat page 9/17).
+- **`PlayerPassMatrix`** — per-game, per-player-pair pass counts (from InStat page 10/18).
+  Row shape: `(id, game_id, from_player_id, to_player_id, count)` with `UNIQUE(game_id, from_player_id, to_player_id)`.
+- **`PlayerHitMatrix`** — per-game, per-player-pair hit counts (from InStat page 9/17).
+  Row shape: `(id, game_id, from_player_id, to_player_id, delivered, received)` with `UNIQUE(game_id, from_player_id, to_player_id)`. Each PDF cell reports "delivered—received" so the pair carries both counts.
 
-These enable pass connectivity and hit engagement stats but are unreasonable to enter manually (~200 non-zero cells per game). Deferred until the ingest pipeline can populate them automatically. **Circle back on these — do not drop.**
+These enable pass connectivity and hit engagement stats. Originally deferred (unreasonable to enter manually at ~200 non-zero cells per game), now pulled forward: PDF parsing extracts them at no marginal cost. Downstream visualizations still land in Phase 5 (§8).
 
 ---
 
@@ -149,91 +153,86 @@ These enable pass connectivity and hit engagement stats but are unreasonable to 
 
 ### Goal
 
-One-upload workflow: user drops a file (PDF or screenshots), system extracts all fields it can find, user reviews and corrects, commits to DB. Manual per-field entry remains available in parallel.
+One-upload workflow: user uploads an InStat match-report PDF, system extracts every field it can find, user reviews the parsed values in an editable form, commits to DB. Manual per-field entry remains available for 49ing (still a web dashboard — no free extraction path) and for corrections.
 
-### Input routing
+### Scope: PDF-only, deterministic parsing
 
-| Input type | Extractor | Rationale |
+This is a free tool. Inputs are limited to InStat match-report PDFs (text-layer, not scanned). Parsing uses `pdfplumber` — deterministic, ~100% accurate on structured tables. Claude vision, screenshot ingest, cost budgets, and audit-driven re-extraction from the original design are out of scope.
+
+If InStat's PDF layout changes in a future season, the parser gets updated; there is no vision fallback.
+
+### PDF structure (empirically verified against the sample report)
+
+Reports are 19 pages, symmetric per team. Page 1 is a TOC; page 2 is match-wide team stats; pages 3–10 are the visiting team; pages 11–18 are the home team; page 19 is a glossary. Section headers on each page carry the team name (`"PLAYERS' STATS: HARVARD CRIMSON"`), so pages route by header text rather than fixed page numbers.
+
+### Templates we parse
+
+| PDF section header | Template name | Target table(s) |
 |---|---|---|
-| InStat PDF | `pdfplumber` text extraction + template-specific parser | InStat PDFs are text-layer, not scanned. Parsing is deterministic and ~100% accurate on structured tables. |
-| Screenshot (any source) | Claude API vision → JSON via structured output | 49ing is a web dashboard; coaches may screenshot rather than export. Handles arbitrary image input. |
-| Failed PDF parse | Fallback to vision on rendered page | Resilience to layout changes. |
+| `TEAMS STATS 2` (page 2) | `instat_team_stats` | `TeamGameStatsInStat` |
+| `PLAYERS' STATS: <our team>` | `instat_players_main` | `PlayerGameStatsInStat` main fields (shots, corsi, hits, entries, turnovers) |
+| `GAME TIME DISTRIBUTION: <our team>` | `instat_time_distribution` | `PlayerGameStats` toi/pp/sh — only when the game is InStat-sourced |
+| `CHALLENGES: <our team>` | `instat_challenges` | `PlayerGameStatsInStat` pb_* fields |
+| `HITS DISTRIBUTION: <our team>` | `instat_hit_matrix` | `PlayerHitMatrix` |
+| `PASSES DISTRIBUTION: <our team>` | `instat_pass_matrix` | `PlayerPassMatrix` |
 
-### Template system
+Skipped for now (documented, not parsed):
+- Cover page (P1) — no data.
+- Line combinations (P4/12) — no downstream consumer yet.
+- Shots log (P6/14) — needed for Tier 3 shot-threat stats; parse in Phase 4.
+- Challenge distribution matrix (P8/16) — no downstream consumer.
+- Notes and glossary (P19) — no data.
 
-Each source page has a named template: input schema (fields to extract, expected types) + target DB table. Initial set:
+Templates are Python callables in `app/ingest/templates.py`, each returning a structured dict. Adding a new template is a code change (parser + validator + target-table mapping), not a config edit.
 
-- `instat_main_stats` — InStat page 3/11 (per-player TOI, Corsi, faceoffs, shots, hits)
-- `instat_challenges` — InStat page 7/15 (puck battles by zone)
-- `instat_turnovers_entries` — InStat page 3/11 lower blocks
-- `instat_team_stats` — InStat page 2 (team-level, xG, possession, PP/PK)
-- `49ing_on_ice_rates` — 49ing player tab screenshot
-- `49ing_team_5v5` — 49ing team tab screenshot
-- `49ing_attack_scenarios` — 49ing attack scenarios tab screenshot
+### "Which team is ours" resolution
 
-Templates live in `app/ingest/templates.py` as config dictionaries — no code changes needed to add a new one.
-
-### Auto-detection (single-upload UX)
-
-**PDF path:** page 1 text sniff → detect InStat header → walk pages by header pattern (`"PLAYERS' STATS"`, `"CHALLENGES"`, `"GAME TIME DISTRIBUTION"`, etc.) → auto-run the matching template on each detected section. One PDF upload = ~5 template runs in one workflow.
-
-**Screenshot path:** for each uploaded image, cheap first-pass vision call ("what page/tab is this from?") classifies the source. Confident matches auto-route to their template. Ambiguous images fall back to a "pick template" prompt.
+`settings.our_team_name` (initially a constant in `app/config.py`, e.g. `"HARVARD CRIMSON"`) drives which team's pages get parsed. The team-stats template (P2) uses this to pick the correct column from the side-by-side layout. If the parser can't find a matching team in the PDF, it returns a 400 with the team names it did find.
 
 ### Extraction flow
 
 ```
-1. User uploads file(s), picks target game
-2. Server auto-detects → runs templates
+1. User uploads a PDF and picks a target game (existing game or new game inline).
+2. Server parses the PDF: identifies all six templates by header, runs each parser.
 3. Per-template validation:
-     - jersey numbers match roster
-     - numeric fields parse
-     - "won / total" fields satisfy won ≤ total
-     - Failed validations flagged, not rejected
-4. Review UI:
-     - Left sidebar: per-template tabs with status (✓ / ⚠️ / ✗)
-     - Right: split-screen extracted-form + source page (zoomable)
-     - Every field's original text on hover for verification
-     - Save-draft supported
-5. "Commit all" button → atomic write to DB
+     - jersey numbers match roster (fail: flag row, keep going)
+     - numeric fields parse (fail: null the field, flag it)
+     - "won—total" cells satisfy won ≤ total
+4. Result stored as an IngestRun row: parsed_json + status = "pending_review".
+5. Frontend fetches the IngestRun, shows an editable review form (one collapsible section per template, one row per player where applicable, validator warnings inline).
+6. User edits any values, hits Commit → server writes all rows atomically; IngestRun.status → "committed".
+7. Discard → server soft-deletes the IngestRun.
 ```
 
-### Vision call specifics
+No split-screen PDF viewer. Coach has the source PDF locally; if they need to double-check a value, they open it in a PDF viewer.
 
-- **Model:** Claude Sonnet 4.6 by default (~5× cheaper than Opus, sufficient for tables). Auto-retry with Opus 4.7 if >20% of fields fail validation.
-- **Structured output:** template's field schema passed as `response_format` JSON schema. Vision returns strict-shape JSON.
-- **Cost cap:** hard limit of $1/game in a settings table.
+### Storage
 
-### Storage & audit
-
-- Uploaded files: `backend/uploads/{game_id}/{timestamp}_{template}.{ext}`. Never deleted.
-- New table `ExtractionRun`: `{run_id, game_id, template, source_file_path, raw_response_json, validated_at, committed_at}`. Lets us re-run extraction if prompts improve, without re-uploading.
+- Uploaded PDFs: `backend/uploads/ingest/{ingest_run_id}.pdf`. Retained so a future parser improvement can re-run against them without a fresh upload.
+- New table `IngestRun`: `(id, game_id, filename, uploaded_at, parsed_json TEXT, status, committed_at NULL, error TEXT NULL)`. Simple audit + re-parseability.
 
 ### Component breakdown
 
 Backend:
-- `app/ingest/templates.py` — template definitions
-- `app/ingest/pdf_parser.py` — pdfplumber wrappers per template
-- `app/ingest/vision.py` — Claude API client + structured output
-- `app/ingest/validators.py` — field-level validation
-- `app/routers/ingest.py` — upload / extract / review / commit endpoints
+- `app/ingest/pdf_parser.py` — one function per template
+- `app/ingest/templates.py` — template registry: name → parser fn + target table + validator
+- `app/ingest/validators.py` — jersey-vs-roster, numeric parse, won ≤ total checks
+- `app/ingest/commit.py` — per-template DB writers (transactional)
+- `app/routers/ingest.py` — upload, preview, commit, discard endpoints
+- `app/models.py` — `IngestRun`, `PlayerHitMatrix`, `PlayerPassMatrix`
+- `backend/migrate_v6.py` — new tables
 
 Frontend:
-- `/ingest/upload` — file picker + game picker
-- `/ingest/review/{run_id}` — split-screen review UI
-- Integrated into existing game entry as an alternative to manual entry
-
-### API key handling
-
-`ANTHROPIC_API_KEY` will be added to environment at build time. SDK dep (`anthropic>=0.40.0`) is already installed in `backend/requirements.txt` — key is deferred pending acquisition from the coach.
+- `/ingest` page — file input + game picker + submit
+- `/ingest/{id}` review view — collapsible sections per template, editable fields, commit / discard buttons
 
 ### Estimated effort
 
-~2.5 weeks focused work:
-- Templates + InStat PDF parsers: ~4 days
-- Vision integration + 49ing templates: ~3 days
-- Review UI (split-screen, edit, commit): ~4 days
-- ExtractionRun table + audit + cost budget: ~2 days
-- Real-game testing: ~2 days
+~1–1.5 weeks focused work:
+- Templates + PDF parsers + validators: ~4 days
+- Schema + migration + endpoints: ~1 day
+- Review UI: ~2 days
+- Fixture-based tests + real-game verification: ~1 day
 
 ---
 
@@ -582,19 +581,19 @@ Position group per stat configured in rules file alongside flag engine.
 
 ## 10. Roadmap
 
-| Phase | Contents | Effort |
-|---|---|---|
-| **0** | Schema migration (option B) + aggregation layer + source flag | ~4 days |
-| **1** | Tier 1 quick wins (position comparisons, TOI flags, auto-flag engine) — ships on current schema | ~1 week |
-| **2** | Ingest pipeline (single-upload, PDF parser, Claude vision, review UI) | ~2.5 weeks |
-| **3** | Tier 2 stats (contested puck, Impact Score, ST v2, entry composition, turnover ratio, danger share) | ~2 weeks |
-| **4** | Tier 3 stats (shot threat, disruption index, goalie) | ~1.5 weeks |
-| **5** | Matrix stats (pass connectivity, hit engagement, pass isolation) — depends on Phase 2 | ~1 week |
-| **6** | Chatbot — own design pass | ~2–3 weeks |
+| Phase | Contents | Effort | Status |
+|---|---|---|---|
+| **0** | Schema migration (option B) + aggregation layer + source flag | ~4 days | ✅ shipped |
+| **1** | Tier 1 quick wins (position comparisons, TOI flags, auto-flag engine) | ~1 week | ✅ shipped |
+| **2** | InStat PDF ingest — 6 templates + `PlayerHitMatrix` / `PlayerPassMatrix` tables + review UI | ~1–1.5 weeks | next |
+| **3** | Tier 2 stats (contested puck, Impact Score, ST v2, entry composition, turnover ratio, danger share) | ~2 weeks | after Phase 2 |
+| **4** | Tier 3 stats (shot threat by scenario, disruption index, goalie) — includes InStat shots-log parser | ~1.5 weeks | after Phase 3 |
+| **5** | Matrix visualizations (pass connectivity map, hit engagement profile, pass isolation flag) — matrix data already stored by Phase 2 | ~1 week | after Phase 4 |
+| **6** | Chatbot — own design pass | ~2–3 weeks | independent |
 
-**Rough total to feature-complete (excluding chatbot):** ~8 weeks. +2–3 weeks for chatbot.
+**Rough total to feature-complete (excluding chatbot):** ~6.5 weeks remaining. +2–3 weeks for chatbot.
 
-Phase 1 runs first because it's independent of the schema migration; ships visible coach value before the bigger architectural work.
+Phases 0 and 1 shipped in parallel. Phase 1 was independent of the schema migration and shipped first; Phase 0 landed alongside without changing any computed values.
 
 ---
 
@@ -615,16 +614,17 @@ This makes the methodology page a single source of truth from day one, so the co
 
 ## 12. Open items
 
-- **Anthropic API key** — pending from coach. SDK installed, integration code will be built with a mocked/optional key.
+- **`our_team_name` configuration** — hardcoded constant initially (§4). Move to a settings table if we ever track more than one team.
 - **Flag thresholds** — 10%/z=1.0 defaults are guesses. Expect to tune after Phase 1 with real data.
 - **Single-game outlier thresholds** (50% / 150% of L10) — same, may tune.
 - **Attack scenario coverage on 49ing** — currently only team-level xG per scenario is exposed. If 49ing ever exposes per-player scenario data, coach ask #3 becomes source-agnostic (currently InStat-only).
 - **Second goalie or more** — the goalie personal-stat block assumes multiple goalies play. Verify roster reflects this before Phase 4.
+- **InStat template drift** — if InStat changes their PDF layout between seasons, all six parsers may need updates. Golden-fixture tests will catch this on the first game of a new season.
 
 ---
 
 ## 13. Deferred — do not lose track of
 
-1. `PlayerPassMatrix` and `PlayerHitMatrix` tables + downstream visualizations (§3, §8).
-2. Chatbot design (§8).
-3. Cost-budget UI (currently backend-only per §4).
+1. Pass connectivity / hit engagement visualizations (Phase 5). Matrix data now stored by Phase 2; only the UI remains.
+2. InStat shots-log parser + shot-threat-by-scenario stats (Phase 4 / §9.11).
+3. Chatbot design (§8, Phase 6).
