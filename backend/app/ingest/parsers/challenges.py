@@ -4,7 +4,8 @@ Layout: per-player puck-battle counts by zone (DZ / OZ / NZ). Cells report
 'total/won' pairs (e.g. '6/2') followed by a win-percentage token (e.g. '33%').
 An em-dash ('—') indicates zero challenges in that zone.
 
-Column x-coordinate anchors (from fixture inspection):
+Column x-coordinate anchors (from fixture inspection at
+backend/tests/fixtures/instat_sample.pdf):
   ~107  Challenges (overall total)
   ~160  Defensive zone aggregate
   ~414  Offensive zone aggregate
@@ -22,6 +23,8 @@ Two row layouts appear in the fixture:
 Returns list of dicts with pb_* fields matching PlayerGameStatsInStat.
 Note: cell format is 'total/won', so pb_total = first number, pb_won = second.
 """
+from __future__ import annotations
+
 import re
 from collections import defaultdict
 import pdfplumber
@@ -39,7 +42,7 @@ _JERSEY_RE = re.compile(r"^\d{1,2}$")
 
 # Player names: text at approximately x=43 (slightly indented from jersey)
 _NAME_X_MIN = 40
-_NAME_X_MAX = 55
+_NAME_X_MAX = 75
 
 # Ratio cell: "total/won" with slash separator
 _RATIO_RE = re.compile(r"^(\d+)/(\d+)$")
@@ -76,7 +79,7 @@ def parse_challenges(pdf: pdfplumber.PDF, our_team: str) -> list[dict]:
     return _extract_challenge_rows(words)
 
 
-def _parse_won_total(cell: str) -> "tuple[int | None, int | None]":
+def _parse_won_total(cell: str) -> tuple[int | None, int | None]:
     """Parse 'total/won' or 'total—won' or '—' cells.
 
     The InStat format places total first and won second (e.g. '6/2' means
