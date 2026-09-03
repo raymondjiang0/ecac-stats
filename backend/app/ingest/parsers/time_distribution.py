@@ -68,7 +68,7 @@ def parse_time_distribution(pdf: pdfplumber.PDF, our_team: str) -> list[dict]:
         list of dicts, one per player:
             jersey_number  : str
             player_name    : str   (last name only)
-            toi_5v5_seconds: int   (total TOI across all periods; PP/SH not
+            toi_5v5_seconds: int | None   (total TOI across all periods; PP/SH not
                                     separately available from this page layout)
             toi_pp_seconds : None  (unavailable — see module docstring)
             toi_sh_seconds : None  (unavailable — see module docstring)
@@ -93,8 +93,9 @@ def _extract_time_rows(words: list) -> list[dict]:
       1. Group words by their rounded vertical position (top) into text lines.
       2. Walk lines in order. When a line consists solely of a jersey-number
          token at the left margin, start a new player record.
-      3. Collect time tokens from the subsequent 1-2 lines by matching their
-         x-coordinates to one of the three period columns.
+      3. Collect time tokens from the subsequent 1-3 lines by matching their
+         x-coordinates to one of the three period columns (cap at 4 lines total
+         to handle wrapped time tokens and defense against layout drift).
       4. The player name follows the jersey number line (possibly on the same
          line as a wrapped time token).
     """
@@ -111,6 +112,9 @@ def _extract_time_rows(words: list) -> list[dict]:
 
     # --- Step 2-4: walk lines and build records ---
     records: list[dict] = []
+    # NOTE: assumes the InStat page header is exactly 2 lines (matches the
+    # fixture layout). If InStat changes their header size, jersey numbers
+    # appearing in header lines could be misprocessed or dropped.
     skip_tops = set()  # header/meta tops to ignore
 
     # Mark the first two lines (page header) as skip
