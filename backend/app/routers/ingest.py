@@ -50,17 +50,16 @@ def upload(
     db.add(run)
     db.commit()
 
-    dest = os.path.join(_upload_dir(), f"{run.id}.pdf")
-    with open(dest, "wb") as f:
-        f.write(file.file.read())
-
     try:
+        dest = os.path.join(_upload_dir(), f"{run.id}.pdf")
+        with open(dest, "wb") as f:
+            f.write(file.file.read())
         parsed = parse_all(dest, OUR_TEAM_NAME)
     except Exception as e:
         run.status = "failed"
         run.error = str(e)
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Parse failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
 
     run.parsed_json = json.dumps(parsed)
     db.commit()
@@ -128,6 +127,11 @@ def discard_run(ingest_run_id: int, db: Session = Depends(get_db)):
     run = db.query(IngestRun).filter_by(id=ingest_run_id).one_or_none()
     if run is None:
         raise HTTPException(status_code=404, detail="Not found")
+    if run.status == "committed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Run {ingest_run_id} is already committed; cannot discard",
+        )
     run.status = "discarded"
     db.commit()
     return {"status": "discarded"}

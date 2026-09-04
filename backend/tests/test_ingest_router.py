@@ -85,6 +85,7 @@ class TestUploadEndpoint:
         body = resp.json()
         assert "ingest_run_id" in body
         assert "preview" in body
+        assert "warnings" in body
 
     def test_upload_creates_ingest_run_row(self, client, clean_db):
         game = clean_db.query(Game).first()
@@ -152,3 +153,17 @@ class TestDeleteEndpoint:
         clean_db.expire_all()
         row = clean_db.query(IngestRun).filter_by(id=run_id).one()
         assert row.status == "discarded"
+
+    def test_delete_committed_run_returns_400(self, client, clean_db):
+        game = clean_db.query(Game).first()
+        with open(FIXTURE, "rb") as f:
+            up = client.post(
+                "/api/ingest/upload",
+                files={"file": ("sample.pdf", f, "application/pdf")},
+                data={"game_id": str(game.id)},
+            )
+        run_id = up.json()["ingest_run_id"]
+        resp = client.post(f"/api/ingest/{run_id}/commit")
+        assert resp.status_code == 200
+        resp = client.delete(f"/api/ingest/{run_id}")
+        assert resp.status_code == 400
