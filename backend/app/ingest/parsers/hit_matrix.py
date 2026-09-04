@@ -17,11 +17,27 @@ Text layout (from extract_text()):
   Final line: "TOTAL ..."
 """
 import re
+from typing import Optional
 import pdfplumber
 from ..pdf_nav import find_section_page, HITS_DISTRIBUTION_SECTION
-from .challenges import _parse_won_total  # 'a—b' → (a, b) parser
 
 _JERSEY_RE = re.compile(r"^\d{1,2}$")
+
+_HIT_CELL_RE = re.compile(r"^\s*(\d+)\s*[—/-]\s*(\d+)\s*$")
+
+
+def _parse_hit_cell(cell: str) -> tuple[Optional[int], Optional[int]]:
+    """Parse a hit-matrix cell 'delivered—received' into (delivered, received).
+
+    No invariant constraint — delivered and received are independent counts.
+    Returns (None, None) for bare '—' or unparseable input.
+    """
+    if not cell or cell.strip() in ("—", "-"):
+        return None, None
+    m = _HIT_CELL_RE.match(cell.strip())
+    if not m:
+        return None, None
+    return int(m.group(1)), int(m.group(2))
 
 
 def parse_hit_matrix(pdf: pdfplumber.PDF, our_team: str) -> list[dict]:
@@ -56,8 +72,8 @@ def _extract_hit_pairs(text: str) -> list[dict]:
 
     Parses the jersey-numbers header row, the names header row, then iterates
     through player data rows (each is a 3-line group: jersey, cells, name).
-    Uses _parse_won_total to parse each 'delivered—received' cell.
-    Skips cells that parse to (None, None) (i.e. bare '—') or (0, 0).
+    Uses _parse_hit_cell to parse each 'delivered—received' cell.
+    Skips self-hit cells, cells that parse to (None, None) (i.e. bare '—'), and (0, 0) pairs.
     """
     lines = text.splitlines()
 
@@ -142,7 +158,10 @@ def _extract_hit_pairs(text: str) -> list[dict]:
     results: list[dict] = []
     for row_idx, (from_jersey, from_name) in enumerate(players):
         for col_idx, cell in enumerate(cell_rows[row_idx]):
-            delivered, received = _parse_won_total(cell)
+            # Skip self-hit cells — a player can't hit themselves
+            if col_jerseys[col_idx] == from_jersey:
+                continue
+            delivered, received = _parse_hit_cell(cell)
             # Skip empty cells (None) and zero-zero interactions
             if delivered is None and received is None:
                 continue
