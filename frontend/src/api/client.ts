@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   Player, Game, GameCreate, TeamGameStats,
   PlayerGameStats, PlayerAggStats, TeamAggStats,
+  IngestPreview, IngestRun,
 } from '../types'
 
 const api = axios.create({ baseURL: '/api' })
@@ -82,3 +83,32 @@ export const exportAllData = () =>
     a.click()
     URL.revokeObjectURL(url)
   })
+
+// Ingest
+export const uploadIngest = (file: File, gameId: number) => {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('game_id', String(gameId))
+  return api.post<{
+    ingest_run_id: number
+    warnings: string[]
+    preview: IngestPreview
+  }>('/ingest/upload', form).then(r => r.data)
+}
+
+export const getIngestRun = (id: number) =>
+  api.get<IngestRun>(`/ingest/${id}`).then(r => r.data)
+
+export const commitIngest = (
+  id: number,
+  parsedJson?: { templates: IngestPreview; warnings: string[] }
+) => {
+  const body = parsedJson !== undefined ? { parsed_json: parsedJson } : undefined
+  return api.post<{ wrote: Record<string, number>; skipped: string[] }>(
+    `/ingest/${id}/commit`,
+    body,
+  ).then(r => r.data)
+}
+
+export const discardIngest = (id: number) =>
+  api.delete<{ status: string }>(`/ingest/${id}`).then(r => r.data)

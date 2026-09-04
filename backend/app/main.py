@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .routers import players, games, stats, reports
+from .routers import ingest as ingest_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +20,7 @@ app.include_router(players.router)
 app.include_router(games.router)
 app.include_router(stats.router)
 app.include_router(reports.router)
+app.include_router(ingest_router.router)
 
 
 @app.get("/api/health")

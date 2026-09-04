@@ -177,3 +177,52 @@ export interface PlayerFlag {
   baseline_value: number | null
   game_id: number | null
 }
+
+export interface IngestTeamStats {
+  pp_shots: number | null
+  pp_time_seconds_in_oz: number | null
+  pp_time_seconds_total: number | null
+  pk_opp_breakouts: number | null
+  pp_opp_breakouts_allowed: number | null
+  puck_possession_seconds_total: number | null
+  oz_possession_seconds: number | null
+  oz_possession_pct: number | null
+  scoring_chance_shots: number | null
+  scoring_chance_shots_on_goal: number | null
+}
+
+export interface IngestPlayerRow {
+  jersey_number: string
+  player_name: string
+  [key: string]: string | number | null
+}
+
+export interface IngestMatrixRow {
+  from_jersey: string
+  from_name: string
+  to_jersey: string
+  to_name: string
+  delivered?: number
+  received?: number
+  count?: number
+}
+
+export interface IngestPreview {
+  instat_team_stats: IngestTeamStats
+  instat_players_main: IngestPlayerRow[]
+  instat_time_distribution: IngestPlayerRow[]
+  instat_challenges: IngestPlayerRow[]
+  instat_hit_matrix: IngestMatrixRow[]
+  instat_pass_matrix: IngestMatrixRow[]
+}
+
+export interface IngestRun {
+  id: number
+  game_id: number
+  filename: string
+  uploaded_at: string
+  status: 'pending_review' | 'committed' | 'discarded' | 'failed'
+  parsed_json: { templates: IngestPreview; warnings: string[] }
+  committed_at: string | null
+  error: string | null
+}

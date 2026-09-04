@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 from typing import Literal, Optional
-from datetime import date
+from datetime import date, datetime
 
 DataSource = Literal["49ing", "instat", "both"]
 
@@ -259,5 +259,40 @@ class TeamGameStatsInStat(BaseModel):
     oz_possession_pct: Optional[float] = None
     scoring_chance_shots: Optional[int] = None
     scoring_chance_shots_on_goal: Optional[int] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ── Ingest Run ────────────────────────────────────────────────────────────────
+
+class IngestRunOut(BaseModel):
+    id: int
+    game_id: int
+    filename: str
+    uploaded_at: datetime
+    status: str
+    committed_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PlayerHitMatrixOut(BaseModel):
+    id: Optional[int] = None
+    game_id: int
+    from_player_id: int
+    to_player_id: int
+    delivered: int
+    received: int
+
+    model_config = {"from_attributes": True}
+
+
+class PlayerPassMatrixOut(BaseModel):
+    id: Optional[int] = None
+    game_id: int
+    from_player_id: int
+    to_player_id: int
+    count: int
 
     model_config = {"from_attributes": True}
