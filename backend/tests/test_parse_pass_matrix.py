@@ -28,6 +28,8 @@ class TestParsePassMatrix:
             for k in ("from_jersey", "from_name", "to_jersey", "to_name", "count"):
                 assert k in r
             assert isinstance(r["count"], int)
+            for k in ("from_jersey", "from_name", "to_jersey", "to_name"):
+                assert isinstance(r[k], str)
 
     def test_reasonable_pair_count(self, pdf):
         # Fixture's Harvard passes matrix has 139 total passes across many pairs
@@ -36,3 +38,8 @@ class TestParsePassMatrix:
 
     def test_returns_empty_for_unknown_team(self, pdf):
         assert parse_pass_matrix(pdf, "NOPE") == []
+
+    def test_no_self_pass_pairs(self, pdf):
+        rows = parse_pass_matrix(pdf, "HARVARD CRIMSON")
+        for r in rows:
+            assert r["from_jersey"] != r["to_jersey"]

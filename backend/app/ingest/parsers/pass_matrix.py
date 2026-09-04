@@ -32,7 +32,7 @@ def _parse_pass_cell(cell: str) -> Optional[int]:
     s = cell.strip()
     if not s or s == "—" or s == "-":
         return None
-    if s.isdigit():
+    if s.isdecimal():
         return int(s)
     return None
 
