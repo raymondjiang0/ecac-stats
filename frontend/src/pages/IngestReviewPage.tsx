@@ -9,7 +9,8 @@ export default function IngestReviewPage() {
   const navigate = useNavigate()
   const [run, setRun] = useState<IngestRun | null>(null)
   const [preview, setPreview] = useState<IngestPreview | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [result, setResult] = useState<{ wrote: Record<string, number>; skipped: string[] } | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -20,19 +21,20 @@ export default function IngestReviewPage() {
         setRun(r)
         setPreview(r.parsed_json.templates)
       })
-      .catch((e) => setError(String(e)))
+      .catch((e) => setLoadError(String(e)))
   }, [id])
 
-  if (error) return <div style={{ padding: 24, color: 'var(--color-red)' }}>{error}</div>
+  if (loadError) return <div style={{ padding: 24, color: 'var(--color-red)' }}>{loadError}</div>
   if (!run || !preview) return <div style={{ padding: 24 }}>Loading…</div>
 
   async function commit() {
     setBusy(true)
+    setSubmitError(null)
     try {
       const r = await commitIngest(Number(id), { templates: preview!, warnings: run!.parsed_json.warnings })
       setResult(r)
     } catch (e) {
-      setError(String(e))
+      setSubmitError(String(e))
     } finally {
       setBusy(false)
     }
@@ -40,8 +42,16 @@ export default function IngestReviewPage() {
 
   async function discard() {
     if (!confirm('Discard this ingest? The uploaded PDF is preserved but no DB changes will be made.')) return
-    await discardIngest(Number(id))
-    navigate('/ingest')
+    setBusy(true)
+    setSubmitError(null)
+    try {
+      await discardIngest(Number(id))
+      navigate('/ingest')
+    } catch (e) {
+      setSubmitError(String(e))
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (result) {
@@ -105,6 +115,7 @@ export default function IngestReviewPage() {
           Discard
         </button>
       </div>
+      {submitError && <div style={{ color: 'var(--color-red)', marginTop: 8 }}>{submitError}</div>}
     </div>
   )
 }
