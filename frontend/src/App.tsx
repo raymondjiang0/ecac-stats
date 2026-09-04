@@ -4,12 +4,14 @@ import GamesPage from './pages/GamesPage'
 import GameDetailPage from './pages/GameDetailPage'
 import ReportsPage from './pages/ReportsPage'
 import MethodologyPage from './pages/MethodologyPage'
+import IngestPage from './pages/IngestPage'
 
 const NAV = [
   { to: '/roster', label: 'Roster', icon: '⬡' },
   { to: '/games', label: 'Games', icon: '◈' },
   { to: '/reports', label: 'Reports', icon: '◉' },
   { to: '/methodology', label: 'Methodology', icon: '◎' },
+  { to: '/ingest', label: 'Ingest', icon: '⇱' },
 ]
 
 export default function App() {
@@ -45,6 +47,7 @@ export default function App() {
           <Route path="/games/:id" element={<GameDetailPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />
+          <Route path="/ingest" element={<IngestPage />} />
         </Routes>
       </main>
     </div>
