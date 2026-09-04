@@ -133,8 +133,8 @@ def commit_parsed(parsed: dict, game_id: int, db_session) -> dict:
                     game_id=game_id, from_player_id=f_player.id, to_player_id=t_player.id
                 )
                 db_session.add(existing)
-            existing.delivered = row.get("delivered", 0)
-            existing.received = row.get("received", 0)
+            existing.delivered = row.get("delivered") or 0
+            existing.received = row.get("received") or 0
             wrote["instat_hit_matrix"] += 1
 
         # instat_pass_matrix: upsert per from→to pair
@@ -154,7 +154,7 @@ def commit_parsed(parsed: dict, game_id: int, db_session) -> dict:
                     game_id=game_id, from_player_id=f_player.id, to_player_id=t_player.id
                 )
                 db_session.add(existing)
-            existing.count = row.get("count", 0)
+            existing.count = row.get("count") or 0
             wrote["instat_pass_matrix"] += 1
 
         db_session.commit()

@@ -36,6 +36,12 @@ def upload(
     game_id: int = Form(...),
     db: Session = Depends(get_db),
 ):
+    if file.content_type not in ("application/pdf", "application/x-pdf"):
+        raise HTTPException(
+            status_code=415,
+            detail="Only PDF files accepted",
+        )
+
     game = db.query(Game).filter_by(id=game_id).one_or_none()
     if game is None:
         raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
@@ -51,15 +57,18 @@ def upload(
     db.commit()
 
     try:
+        content = file.file.read()
+        if len(content) > 50 * 1024 * 1024:
+            raise ValueError(f"PDF too large ({len(content)} bytes); 50 MB max")
         dest = os.path.join(_upload_dir(), f"{run.id}.pdf")
         with open(dest, "wb") as f:
-            f.write(file.file.read())
+            f.write(content)
         parsed = parse_all(dest, OUR_TEAM_NAME)
     except Exception as e:
         run.status = "failed"
         run.error = str(e)
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse PDF")
 
     run.parsed_json = json.dumps(parsed)
     db.commit()

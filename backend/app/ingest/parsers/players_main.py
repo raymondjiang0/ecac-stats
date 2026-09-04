@@ -207,7 +207,7 @@ def _parse_secondary_line(line: str) -> Optional[dict]:
     preceding stat value is non-dash. We skip them dynamically.
     """
     # Find all occurrences of "jersey LastName" in the line
-    pattern = r"\b(\d{1,2})\s+([A-Za-z]+)"
+    pattern = r"\b(\d{1,2})\s+([A-Za-z'\-]+)"
     matches = list(re.finditer(pattern, line))
 
     if len(matches) < 3:

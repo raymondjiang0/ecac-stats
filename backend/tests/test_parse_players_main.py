@@ -1,7 +1,7 @@
 import os
 import pytest
 import pdfplumber
-from app.ingest.parsers.players_main import parse_players_main, _parse_main_stats_line
+from app.ingest.parsers.players_main import parse_players_main, _parse_main_stats_line, _parse_secondary_line
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "instat_sample.pdf")
 
@@ -67,3 +67,17 @@ class TestParsePlayersMain:
         assert row is not None, "O'Leary should not be silently skipped"
         assert row["player_name"] == "O'Leary"
         assert row["jersey_number"] == "17"
+
+    def test_secondary_line_apostrophe_name_extracted(self):
+        """Regression: _parse_secondary_line regex was pure-alpha; apostrophe/hyphen
+        names like O'Leary caused the group count to drop below 3, returning None."""
+        # Secondary line format: jersey Name <group1 stats> jersey Name <group2 stats> jersey Name <group3 stats>
+        # Each group is separated by the next jersey+name occurrence.
+        line = "17 O'Leary 4 3 2 1 17 O'Leary 5 2 8 3 17 O'Leary 10 3 50% 2 33% 1 10%"
+        row = _parse_secondary_line(line)
+        assert row is not None, "_parse_secondary_line should handle apostrophe names"
+        assert row["jersey_number"] == "17"
+        assert row["puck_losses"] == 5
+        assert row["puck_losses_dz"] == 2
+        assert row["puck_recoveries"] == 8
+        assert row["puck_recoveries_oz"] == 3

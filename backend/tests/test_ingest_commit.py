@@ -137,6 +137,31 @@ class TestCommitParsed:
         assert rows[0].shots == 9
 
 
+    def test_hit_matrix_none_values_committed_as_zero(self, db_session, game_and_players):
+        """Regression: user-cleared cells send None; `or 0` must coerce to 0
+        instead of letting IntegrityError abort the whole commit."""
+        g, p10, p7 = game_and_players
+        parsed = {
+            "templates": {
+                "instat_team_stats": _empty_team(),
+                "instat_players_main": [], "instat_time_distribution": [],
+                "instat_challenges": [],
+                "instat_hit_matrix": [
+                    {"from_jersey": "10", "from_name": "Ten",
+                     "to_jersey": "7", "to_name": "Seven",
+                     "delivered": None, "received": None},
+                ],
+                "instat_pass_matrix": [],
+            },
+            "warnings": [],
+        }
+        report = commit_parsed(parsed, g.id, db_session)
+        assert report["wrote"]["instat_hit_matrix"] == 1
+        row = db_session.query(PlayerHitMatrix).filter_by(game_id=g.id).one()
+        assert row.delivered == 0
+        assert row.received == 0
+
+
 def _empty_team():
     return {
         "pp_shots": None, "pp_time_seconds_in_oz": None,

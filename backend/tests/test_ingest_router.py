@@ -167,3 +167,25 @@ class TestDeleteEndpoint:
         assert resp.status_code == 200
         resp = client.delete(f"/api/ingest/{run_id}")
         assert resp.status_code == 400
+
+
+class TestUploadValidation:
+    def test_upload_rejects_non_pdf_content_type(self, client, clean_db):
+        game = clean_db.query(Game).first()
+        resp = client.post(
+            "/api/ingest/upload",
+            files={"file": ("not_a_pdf.txt", b"hello world", "text/plain")},
+            data={"game_id": str(game.id)},
+        )
+        assert resp.status_code == 415
+
+    def test_upload_rejects_oversized_payload(self, client, clean_db, monkeypatch):
+        game = clean_db.query(Game).first()
+        # 51 MB of zeros — over the 50 MB cap
+        big_blob = b"\x00" * (51 * 1024 * 1024)
+        resp = client.post(
+            "/api/ingest/upload",
+            files={"file": ("big.pdf", big_blob, "application/pdf")},
+            data={"game_id": str(game.id)},
+        )
+        assert resp.status_code != 200
