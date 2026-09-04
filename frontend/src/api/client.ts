@@ -98,3 +98,17 @@ export const uploadIngest = (file: File, gameId: number) => {
 
 export const getIngestRun = (id: number) =>
   api.get<IngestRun>(`/ingest/${id}`).then(r => r.data)
+
+export const commitIngest = (
+  id: number,
+  parsedJson?: { templates: IngestPreview; warnings: string[] }
+) => {
+  const body = parsedJson !== undefined ? { parsed_json: parsedJson } : undefined
+  return api.post<{ wrote: Record<string, number>; skipped: string[] }>(
+    `/ingest/${id}/commit`,
+    body,
+  ).then(r => r.data)
+}
+
+export const discardIngest = (id: number) =>
+  api.delete<{ status: string }>(`/ingest/${id}`).then(r => r.data)
