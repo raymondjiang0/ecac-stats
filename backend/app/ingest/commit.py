@@ -6,7 +6,7 @@ of the same game replaces prior values.
 """
 from ..models import (
     Player, TeamGameStatsInStat, PlayerGameStatsInStat,
-    PlayerHitMatrix, PlayerPassMatrix,
+    PlayerGameStats, PlayerHitMatrix, PlayerPassMatrix,
 )
 
 
@@ -20,11 +20,18 @@ def commit_parsed(parsed: dict, game_id: int, db_session) -> dict:
     wrote = {name: 0 for name in templates}
     skipped: list[str] = []
 
+    # Single-team assumption: current app tracks one team (OUR_TEAM_NAME).
+    # Multi-team support would require scoping this query by a team_id FK
+    # on Player, which the schema doesn't currently have.
     roster = {p.number: p for p in db_session.query(Player).all()}
 
     try:
         # instat_team_stats: single upsert on game_id
         team = templates.get("instat_team_stats") or {}
+        # Skip when all team fields are None — likely means the parser
+        # couldn't extract this section, not "explicitly clear this data".
+        # A re-ingest with all-None values will NOT clear previously-written
+        # team-stats values.
         if any(v is not None for v in team.values()):
             existing = db_session.query(TeamGameStatsInStat).filter_by(
                 game_id=game_id
@@ -87,7 +94,6 @@ def commit_parsed(parsed: dict, game_id: int, db_session) -> dict:
         # populated by 49ing, this overwrites — fine per data_source == "both"
         # 49ing-precedence rule NOT applying to raw TOI which is identical
         # across sources.)
-        from ..models import PlayerGameStats
         for row in templates.get("instat_time_distribution") or []:
             player = roster.get(str(row.get("jersey_number", "")).strip())
             if player is None:
