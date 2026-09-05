@@ -34,3 +34,41 @@ def enrich_player_agg(
     agg["game_flags"] = game_flags
 
     return agg
+
+
+from datetime import date as _date
+from sqlalchemy.orm import Session
+from typing import Optional as _Optional
+from .models import PlayerGameStatsInStat, TeamGameStatsInStat, Game
+
+
+def load_player_instat_rows(
+    db: Session,
+    player_id: int,
+    date_from: _Optional[_date] = None,
+    date_to: _Optional[_date] = None,
+) -> list[PlayerGameStatsInStat]:
+    """Load PlayerGameStatsInStat rows for a player, optionally filtered by
+    game date range. Returns [] if the player has no rows."""
+    q = db.query(PlayerGameStatsInStat).join(Game).filter(
+        PlayerGameStatsInStat.player_id == player_id
+    )
+    if date_from is not None:
+        q = q.filter(Game.date >= date_from)
+    if date_to is not None:
+        q = q.filter(Game.date <= date_to)
+    return q.all()
+
+
+def load_team_instat_rows(
+    db: Session,
+    date_from: _Optional[_date] = None,
+    date_to: _Optional[_date] = None,
+) -> list[TeamGameStatsInStat]:
+    """Load TeamGameStatsInStat rows, optionally filtered by game date range."""
+    q = db.query(TeamGameStatsInStat).join(Game)
+    if date_from is not None:
+        q = q.filter(Game.date >= date_from)
+    if date_to is not None:
+        q = q.filter(Game.date <= date_to)
+    return q.all()
