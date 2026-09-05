@@ -156,3 +156,35 @@ def special_teams_v2(team_instat_rows: list) -> dict:
         "pk_count": pk_count,
         "games": games,
     }
+
+
+def danger_zone_shot_share(
+    instat_rows: list,
+    team_instat_rows: list,
+    pgs_rows: list,
+) -> dict:
+    """Player's share of team's high-danger shots + per-60 rate (§9.6).
+
+    Numerator: sum of player's SCA shots (or `shots` as a proxy until Phase 4
+    adds true per-player scoring-chance shot tracking).
+    Denominator: sum of team's scoring_chance_shots across the same games.
+    """
+    player_sca = 0
+    games_with_data = 0
+    for r in instat_rows:
+        sca = getattr(r, "scoring_chance_shots", None)
+        val = sca if sca is not None else (r.shots or 0)
+        if val > 0:
+            games_with_data += 1
+        player_sca += val
+
+    team_sca = sum((t.scoring_chance_shots or 0) for t in team_instat_rows)
+    total_toi = sum((p.toi_5v5 or 0) for p in pgs_rows)
+
+    return {
+        "share_pct": (player_sca / team_sca) if team_sca > 0 else None,
+        "shots_per_60": (player_sca * 60.0 / total_toi) if total_toi > 0 else None,
+        "player_sca_shots": player_sca,
+        "team_sca_shots": team_sca,
+        "games": games_with_data,
+    }
