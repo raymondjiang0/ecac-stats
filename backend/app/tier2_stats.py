@@ -80,3 +80,34 @@ def zone_entry_composition(instat_rows: list) -> dict:
         "total_entries": total,
         "games": games,
     }
+
+
+def turnover_location_ratio(instat_rows: list) -> dict:
+    """Aggregate turnover-location metrics (§9.5).
+
+    - dz_loss_share: DZ losses ÷ total losses
+    - oz_recovery_share: OZ recoveries ÷ total recoveries
+    Both are None when their denominator is 0.
+    """
+    total_losses = 0
+    dz_losses = 0
+    total_recoveries = 0
+    oz_recoveries = 0
+    games = 0
+    for r in instat_rows:
+        losses = r.puck_losses or 0
+        recoveries = r.puck_recoveries or 0
+        if losses > 0 or recoveries > 0:
+            games += 1
+        total_losses += losses
+        dz_losses += r.puck_losses_dz or 0
+        total_recoveries += recoveries
+        oz_recoveries += r.puck_recoveries_oz or 0
+
+    return {
+        "dz_loss_share": (dz_losses / total_losses) if total_losses > 0 else None,
+        "oz_recovery_share": (oz_recoveries / total_recoveries) if total_recoveries > 0 else None,
+        "total_losses": total_losses,
+        "total_recoveries": total_recoveries,
+        "games": games,
+    }
