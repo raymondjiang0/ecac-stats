@@ -91,19 +91,20 @@ class TestImpactScore:
         assert all("z_entry" not in g["components"] for g in r["per_game"])
 
     def test_clamping(self):
-        # Construct a scenario where raw mean would exceed +3
+        # Force clamping to fire deterministically: z-score > 3 in at least one component
         p = self._player()
-        # Player performs 5σ above cohort in all components
-        strong_cohort = {
+        # Cohort with mean=0.5 and clear, reasonable stddev
+        cohort = {
             "F": {
-                "xg_diff": [0.0] * 10,  # stddev = 0 → skip
-                "cf_pct": [0.5] * 5 + [0.51],  # near-zero stddev
-                "battle_w_pct": [0.5] * 5 + [0.51],
-                "controlled_entry_pct": [0.5] * 5 + [0.51],
+                "xg_diff": [0.0, 0.1, -0.1, 0.05, -0.05, 0.0, 0.02, -0.02, 0.03, -0.03],
+                "cf_pct": [0.5] * 10,
+                "battle_w_pct": [0.5] * 10,
+                "controlled_entry_pct": [0.5] * 10,
             },
         }
-        pgs = [_pgs(game_id=1, xgf60=100, xga60=0, cf60=100, ca60=0)]
-        instat = {1: _instat(game_id=1, pb_w=100, pb_t=100, e_pass=100, e_stick=0, e_dump=0)}
-        r = impact_score(p, pgs, instat, strong_cohort)
-        if r["score"] is not None:
-            assert -3.0 <= r["score"] <= 3.0
+        # Player game: xgf60 - xga60 = 10, way beyond cohort's typical range
+        pgs = [_pgs(game_id=1, xgf60=15, xga60=5)]
+        r = impact_score(p, pgs, {}, cohort)
+        # Verify clamping fired: score should be exactly 3.0 and clamped flag True
+        assert r["score"] == 3.0
+        assert r["clamped"] is True
