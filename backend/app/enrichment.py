@@ -66,6 +66,7 @@ from datetime import date as _date
 from sqlalchemy.orm import Session
 from typing import Optional as _Optional
 from .models import PlayerGameStats, PlayerGameStatsInStat, TeamGameStatsInStat, Game
+from .cohorts import position_group
 
 
 def load_player_instat_rows(
@@ -113,7 +114,7 @@ def build_position_cohorts(
     """
     cohorts: dict = {}
     for p in all_players:
-        pos = p.position or "F"
+        pos = position_group(p)  # returns "C" / "W" / "D" / "G"
         if pos not in cohorts:
             cohorts[pos] = {
                 "xg_diff": [],

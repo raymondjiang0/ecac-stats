@@ -9,6 +9,7 @@ See spec §9.1–§9.6 for formulas.
 """
 from statistics import mean, pstdev
 from typing import Optional
+from .cohorts import position_group
 
 
 def contested_puck_win_pct(instat_rows: list) -> dict:
@@ -220,9 +221,9 @@ def impact_score(
 
     Games with toi_5v5 < 5 are excluded.
     """
-    position = getattr(player, "position", "") or ""
+    position = position_group(player)  # returns "C" / "W" / "D" / "G"
     cohort = position_cohorts.get(position, {})
-    is_forward = position in ("F", "W", "C")
+    is_forward = position in ("C", "W")
 
     per_game: list = []
     weighted_sum = 0.0

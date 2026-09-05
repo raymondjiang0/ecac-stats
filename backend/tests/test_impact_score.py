@@ -28,7 +28,7 @@ def _instat(game_id, pb_w=3, pb_t=5, e_pass=2, e_stick=3, e_dump=1):
 
 
 COHORTS = {
-    "F": {
+    "W": {
         "xg_diff": [0.0, 0.5, -0.3, 0.2, -0.1, 0.4],
         "cf_pct": [0.5, 0.55, 0.48, 0.52, 0.51, 0.49],
         "battle_w_pct": [0.5, 0.55, 0.6, 0.48, 0.52, 0.53],
@@ -95,7 +95,7 @@ class TestImpactScore:
         p = self._player()
         # Cohort with mean=0.5 and clear, reasonable stddev
         cohort = {
-            "F": {
+            "W": {
                 "xg_diff": [0.0, 0.1, -0.1, 0.05, -0.05, 0.0, 0.02, -0.02, 0.03, -0.03],
                 "cf_pct": [0.5] * 10,
                 "battle_w_pct": [0.5] * 10,

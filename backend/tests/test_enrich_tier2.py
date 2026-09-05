@@ -3,7 +3,7 @@ from datetime import date
 from app.models import (
     Player, Game, PlayerGameStats, PlayerGameStatsInStat, TeamGameStatsInStat,
 )
-from app.enrichment import enrich_player_agg
+from app.enrichment import enrich_player_agg, build_position_cohorts
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ class TestEnrichTier2:
 
     def test_with_instat_attaches_tier2_stats(self, enriched_setup):
         p, agg, pgs_rows, instat_rows, team_rows = enriched_setup
-        cohorts = {"F": {
+        cohorts = {"C": {
             "xg_diff": [0.0, 0.3, -0.2, 0.4, 0.1],
             "cf_pct": [0.5, 0.52, 0.48, 0.55, 0.51],
             "battle_w_pct": [0.5, 0.55, 0.48, 0.52, 0.53],
@@ -104,3 +104,19 @@ class TestEnrichTier2:
             position_cohorts={},
         )
         assert result["impact_score"]["score"] is None
+
+    def test_center_and_winger_use_different_cohorts(self, db_session):
+        center = Player(name="C", number="10", position="F", is_center=True, active=True)
+        winger = Player(name="W", number="7", position="F", is_center=False, active=True)
+        defender = Player(name="D", number="2", position="D", is_center=False, active=True)
+        for p in [center, winger, defender]:
+            db_session.add(p)
+        db_session.commit()
+
+        cohorts = build_position_cohorts([center, winger, defender], db_session)
+        # position_group splits forwards into C and W
+        assert "C" in cohorts
+        assert "W" in cohorts
+        assert "D" in cohorts
+        # Centers and wingers are separate
+        assert cohorts["C"] is not cohorts["W"]
