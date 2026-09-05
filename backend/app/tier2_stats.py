@@ -111,3 +111,48 @@ def turnover_location_ratio(instat_rows: list) -> dict:
         "total_recoveries": total_recoveries,
         "games": games,
     }
+
+
+def special_teams_v2(team_instat_rows: list) -> dict:
+    """Team-level advanced special-teams stats (§9.3).
+
+    - pp_shots_per_min: total PP shots ÷ total PP minutes
+    - pp_oz_ratio: PP OZ seconds ÷ total PP seconds
+    - pk_opp_breakout_rate: total opp breakouts allowed on PK ÷ games with PK data
+    """
+    total_pp_shots = 0
+    total_pp_seconds = 0
+    total_oz_pp_seconds = 0
+    total_pk_breakouts = 0
+    pk_count = 0
+    games = 0
+
+    for r in team_instat_rows:
+        pp_secs = r.pp_time_seconds_total or 0
+        oz_secs = r.pp_time_seconds_in_oz or 0
+        pp_shots = r.pp_shots or 0
+        pk_bk = r.pk_opp_breakouts
+
+        has_data = pp_secs > 0 or pp_shots > 0 or pk_bk is not None
+        if has_data:
+            games += 1
+        if pp_secs > 0:
+            total_pp_seconds += pp_secs
+            total_oz_pp_seconds += oz_secs
+            total_pp_shots += pp_shots
+        if pk_bk is not None:
+            total_pk_breakouts += pk_bk
+            pk_count += 1
+
+    pp_minutes = total_pp_seconds / 60.0 if total_pp_seconds > 0 else (
+        0.0 if any(r.pp_time_seconds_total is not None for r in team_instat_rows) else None
+    )
+
+    return {
+        "pp_shots_per_min": (total_pp_shots / pp_minutes) if pp_minutes and pp_minutes > 0 else None,
+        "pp_oz_ratio": (total_oz_pp_seconds / total_pp_seconds) if total_pp_seconds > 0 else None,
+        "pk_opp_breakout_rate": (total_pk_breakouts / pk_count) if pk_count > 0 else None,
+        "pp_minutes": pp_minutes,
+        "pk_count": pk_count,
+        "games": games,
+    }
