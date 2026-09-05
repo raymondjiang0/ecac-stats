@@ -7,6 +7,7 @@ via the helpers in enrichment.py and pass them in.
 
 See spec §9.1–§9.6 for formulas.
 """
+from statistics import mean, pstdev
 from typing import Optional
 
 
@@ -187,4 +188,129 @@ def danger_zone_shot_share(
         "player_sca_shots": player_sca,
         "team_sca_shots": team_sca,
         "games": games_with_data,
+    }
+
+
+def _z_score(value: float, cohort: list) -> Optional[float]:
+    """Return z-score for value against cohort. None if cohort < 3 or stddev == 0."""
+    if len(cohort) < 3:
+        return None
+    m = mean(cohort)
+    s = pstdev(cohort)
+    if s == 0:
+        return None
+    return (value - m) / s
+
+
+def impact_score(
+    player,
+    pgs_rows: list,
+    instat_rows_by_game: dict,
+    position_cohorts: dict,
+) -> dict:
+    """Composite per-game Impact score, TOI-weighted season aggregate (§9.1).
+
+    Per-game score = mean(available z-scores) across up to 4 components:
+      z_xg: (xgf60 - xga60) vs cohort xg_diff
+      z_terr: cf60/(cf60+ca60) vs cohort cf_pct
+      z_battle: puck-battle W% vs cohort battle_w_pct (InStat only)
+      z_entry: controlled-entry % vs cohort controlled_entry_pct (InStat only, F/W)
+
+    Season score = TOI-weighted mean of per-game scores, clamped to [-3, +3].
+
+    Games with toi_5v5 < 5 are excluded.
+    """
+    position = getattr(player, "position", "") or ""
+    cohort = position_cohorts.get(position, {})
+    is_forward = position in ("F", "W", "C")
+
+    per_game: list = []
+    weighted_sum = 0.0
+    weight_total = 0.0
+    components_used_set: set = set()
+
+    for pgs in pgs_rows:
+        toi = pgs.toi_5v5 or 0
+        if toi < 5:
+            continue
+
+        components: dict = {}
+
+        # z_xg: (xgf60 - xga60) vs cohort xg_diff
+        if pgs.xgf60 is not None and pgs.xga60 is not None:
+            z = _z_score(pgs.xgf60 - pgs.xga60, cohort.get("xg_diff", []))
+            if z is not None:
+                components["z_xg"] = z
+
+        # z_terr: on-ice CF% vs cohort cf_pct
+        cf = pgs.cf60 or 0
+        ca = pgs.ca60 or 0
+        if (cf + ca) > 0:
+            cf_pct = cf / (cf + ca)
+            z = _z_score(cf_pct, cohort.get("cf_pct", []))
+            if z is not None:
+                components["z_terr"] = z
+
+        # InStat components
+        instat = instat_rows_by_game.get(pgs.game_id)
+        if instat is not None:
+            # z_battle
+            pb_won = (instat.pb_won_dz or 0) + (instat.pb_won_oz or 0) + (instat.pb_won_nz or 0)
+            pb_tot = (instat.pb_total_dz or 0) + (instat.pb_total_oz or 0) + (instat.pb_total_nz or 0)
+            if pb_tot > 0:
+                z = _z_score(pb_won / pb_tot, cohort.get("battle_w_pct", []))
+                if z is not None:
+                    components["z_battle"] = z
+
+            # z_entry (F/W only)
+            if is_forward:
+                p_e = instat.entries_pass or 0
+                s_e = instat.entries_stick or 0
+                d_e = instat.entries_dump or 0
+                tot_e = p_e + s_e + d_e
+                if tot_e > 0:
+                    controlled = (p_e + s_e) / tot_e
+                    z = _z_score(controlled, cohort.get("controlled_entry_pct", []))
+                    if z is not None:
+                        components["z_entry"] = z
+
+        if not components:
+            # No valid components this game — still record the game so
+            # caller can see why score is missing
+            per_game.append({
+                "game_id": pgs.game_id,
+                "impact": None,
+                "components": {},
+                "toi_5v5": toi,
+            })
+            continue
+
+        components_used_set.update(components.keys())
+        impact = sum(components.values()) / len(components)
+        per_game.append({
+            "game_id": pgs.game_id,
+            "impact": impact,
+            "components": components,
+            "toi_5v5": toi,
+        })
+        weighted_sum += impact * toi
+        weight_total += toi
+
+    if weight_total == 0:
+        return {
+            "score": None,
+            "games": len(per_game),
+            "components_used": sorted(components_used_set),
+            "clamped": False,
+            "per_game": per_game,
+        }
+
+    raw = weighted_sum / weight_total
+    clamped_val = max(-3.0, min(3.0, raw))
+    return {
+        "score": clamped_val,
+        "games": len(per_game),
+        "components_used": sorted(components_used_set),
+        "clamped": clamped_val != raw,
+        "per_game": per_game,
     }
