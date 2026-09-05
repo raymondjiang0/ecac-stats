@@ -167,15 +167,21 @@ def danger_zone_shot_share(
 ) -> dict:
     """Player's share of team's high-danger shots + per-60 rate (§9.6).
 
-    Numerator: sum of player's SCA shots (or `shots` as a proxy until Phase 4
-    adds true per-player scoring-chance shot tracking).
-    Denominator: sum of team's scoring_chance_shots across the same games.
-    """
+    Numerator: sum of player's SCA-proxy shots across games with InStat data.
+    Denominator: sum of team's scoring_chance_shots across ALL InStat games
+    in the window.
+
+    Note the asymmetry: a player who missed games where the team recorded
+    SCA shots will have their share_pct understated. This matches spec §9.6
+    (share is player contribution to team output, not per-game percentage)
+    but consumers should be aware."""
     player_sca = 0
     games_with_data = 0
     for r in instat_rows:
-        sca = getattr(r, "scoring_chance_shots", None)
-        val = sca if sca is not None else (r.shots or 0)
+        # NOTE: Using r.shots as an SCA proxy — PlayerGameStatsInStat has no
+        # scoring_chance_shots column yet. Phase 4's InStat shots-log parser
+        # will populate a true per-player SCA count; revisit this proxy then.
+        val = r.shots or 0
         if val > 0:
             games_with_data += 1
         player_sca += val
@@ -185,7 +191,7 @@ def danger_zone_shot_share(
 
     return {
         "share_pct": (player_sca / team_sca) if team_sca > 0 else None,
-        "shots_per_60": (player_sca * 60.0 / total_toi) if total_toi > 0 else None,
+        "shots_per_60": (player_sca * 60.0 / total_toi) if (total_toi > 0 and player_sca > 0) else None,
         "player_sca_shots": player_sca,
         "team_sca_shots": team_sca,
         "games": games_with_data,

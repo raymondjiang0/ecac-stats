@@ -151,6 +151,7 @@ const PLAYER_STATS: StatEntry[] = [
     limitations: [
       'Does not sub-differentiate within the scoring-chance zone — a shot from the crease and a shot from the top of the slot count equally.',
       'Team-relative denominator means the number shifts based on teammates\' shot selection, not just this player\'s.',
+      'A player who missed games where the team recorded high-danger shots will have their share understated — the denominator includes all team games in the window, not just games this player appeared in.',
     ],
   },
   {

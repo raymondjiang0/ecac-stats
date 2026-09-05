@@ -63,3 +63,16 @@ class TestDangerZoneShotShare:
         r = danger_zone_shot_share(instat, team, pgs)
         assert r["player_sca_shots"] == 5
         assert r["team_sca_shots"] == 10
+
+    def test_zero_player_sca_with_toi_returns_none_per_60(self):
+        """When player has InStat rows but zero shots and TOI > 0, shots_per_60 must be None.
+
+        Returning 0.0 would be misleading — it signals 'no data available', not 'zero rate'.
+        """
+        instat = [_instat(shots=None)]  # shots=None -> val=0
+        team = [_team(scoring_chance_shots=10)]
+        pgs = [_pgs(toi_5v5=15.0)]
+        r = danger_zone_shot_share(instat, team, pgs)
+        assert r["player_sca_shots"] == 0
+        assert r["shots_per_60"] is None  # must be None, not 0.0
+        assert r["share_pct"] == 0.0  # 0/10 is a valid (zero) share
