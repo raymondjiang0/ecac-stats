@@ -47,3 +47,36 @@ def contested_puck_win_pct(instat_rows: list) -> dict:
         "nz_pct": _pct(won_nz, tot_nz),
         "games": games,
     }
+
+
+def zone_entry_composition(instat_rows: list) -> dict:
+    """Aggregate entry method percentages (§9.4).
+
+    Returns pass/stick/dump percentages as fractions in [0, 1] summing to 1.0
+    (when total > 0). All-None when the window has no entries.
+    """
+    pass_total = stick_total = dump_total = 0
+    games = 0
+    for r in instat_rows:
+        p = r.entries_pass or 0
+        s = r.entries_stick or 0
+        d = r.entries_dump or 0
+        if (p + s + d) > 0:
+            pass_total += p
+            stick_total += s
+            dump_total += d
+            games += 1
+
+    total = pass_total + stick_total + dump_total
+    if total == 0:
+        return {
+            "pass_pct": None, "stick_pct": None, "dump_pct": None,
+            "total_entries": 0, "games": 0,
+        }
+    return {
+        "pass_pct": pass_total / total,
+        "stick_pct": stick_total / total,
+        "dump_pct": dump_total / total,
+        "total_entries": total,
+        "games": games,
+    }
