@@ -249,8 +249,8 @@ export default function ReportsPage() {
       </div>
 
       {teamAgg && teamAgg.special_teams_v2 && teamAgg.special_teams_v2.games > 0 && (
-        <div style={{ marginTop: 16, marginBottom: 24 }}>
-          <h3 style={{ fontSize: 14, marginBottom: 8, color: 'var(--text-secondary)' }}>
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 14, marginBottom: 12, color: 'var(--text-secondary)' }}>
             Special Teams (Advanced)
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -365,7 +365,9 @@ export default function ReportsPage() {
                         const agg = detailAggs[p.id]
                         return (
                           <>
-                            <ImpactScoreCard data={agg.impact_score} />
+                            {agg.impact_score && agg.impact_score.games > 0 && (
+                              <ImpactScoreCard data={agg.impact_score} />
+                            )}
                             <PuckBattleBlock data={agg.contested_puck} />
                             <EntryCompositionBar data={agg.zone_entry} />
 
