@@ -98,6 +98,11 @@ export interface PlayerAggStats {
   flags?: PlayerFlag[]
   game_flags?: Record<number, PlayerFlag[]>
   availability?: Record<string, StatAvailability>
+  contested_puck?: ContestedPuckStats
+  zone_entry?: ZoneEntryStats
+  turnover_ratio?: TurnoverRatioStats
+  danger_share?: DangerShareStats
+  impact_score?: ImpactScoreStats
 }
 
 export interface PlayerTrendPoint {
@@ -138,6 +143,7 @@ export interface TeamAggStats {
   cf_pct_trend: TrendPoint[]
   xgf_pct_trend: TrendPoint[]
   availability?: Record<string, StatAvailability>
+  special_teams_v2?: SpecialTeamsV2Stats
 }
 
 export interface TrendPoint {
@@ -225,4 +231,67 @@ export interface IngestRun {
   parsed_json: { templates: IngestPreview; warnings: string[] }
   committed_at: string | null
   error: string | null
+}
+
+export interface ContestedPuckStats {
+  overall_pct: number | null
+  dz_pct: number | null
+  oz_pct: number | null
+  nz_pct: number | null
+  games: number
+}
+
+export interface ZoneEntryStats {
+  pass_pct: number | null
+  stick_pct: number | null
+  dump_pct: number | null
+  total_entries: number
+  games: number
+}
+
+export interface TurnoverRatioStats {
+  dz_loss_share: number | null
+  oz_recovery_share: number | null
+  total_losses: number
+  total_recoveries: number
+  games: number
+}
+
+export interface DangerShareStats {
+  share_pct: number | null
+  shots_per_60: number | null
+  player_sca_shots: number
+  team_sca_shots: number
+  games: number
+}
+
+export interface ImpactScoreComponent {
+  z_xg?: number
+  z_terr?: number
+  z_battle?: number
+  z_entry?: number
+}
+
+export interface ImpactScorePerGame {
+  game_id: number
+  impact: number | null
+  components: ImpactScoreComponent
+  toi_5v5: number
+}
+
+export interface ImpactScoreStats {
+  score: number | null
+  games: number
+  components_used: string[]
+  clamped: boolean
+  per_game: ImpactScorePerGame[]
+}
+
+export interface SpecialTeamsV2Stats {
+  pp_shots_per_min: number | null
+  pp_oz_ratio: number | null
+  pk_opp_breakout_rate: number | null
+  pp_minutes: number | null
+  pk_count: number
+  games: number
 }

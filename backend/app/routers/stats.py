@@ -6,7 +6,8 @@ from typing import Optional
 from ..database import get_db
 from ..models import Player, Game, TeamGameStats, PlayerGameStats
 from ..calculations import aggregate_team_stats, aggregate_player_stats
-from ..enrichment import enrich_player_agg
+from ..enrichment import enrich_player_agg, load_player_instat_rows, load_team_instat_rows, build_position_cohorts
+from ..tier2_stats import special_teams_v2
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -42,7 +43,12 @@ def team_stats(
     games = _filter_games(db, date_from, date_to)
     game_ids = {g.id for g in games}
     tgs_rows = _tgs_for_games(db, game_ids)
-    return aggregate_team_stats(tgs_rows, games)
+    result = aggregate_team_stats(tgs_rows, games)
+
+    team_instat = load_team_instat_rows(db, date_from, date_to)
+    result["special_teams_v2"] = special_teams_v2(team_instat)
+
+    return result
 
 
 
@@ -69,7 +75,17 @@ def player_stats(
         other_agg = aggregate_player_stats(other, other_pgs, games)
         all_aggs.append((other, other_agg))
 
-    return enrich_player_agg(player, agg, all_aggs)
+    instat_rows = load_player_instat_rows(db, player_id, date_from, date_to)
+    team_rows = load_team_instat_rows(db, date_from, date_to)
+    position_cohorts = build_position_cohorts(all_players, db, date_from, date_to)
+
+    return enrich_player_agg(
+        player, agg, all_aggs,
+        instat_rows=instat_rows,
+        team_instat_rows=team_rows,
+        pgs_rows=pgs_rows,
+        position_cohorts=position_cohorts,
+    )
 
 
 @router.get("/players/all")

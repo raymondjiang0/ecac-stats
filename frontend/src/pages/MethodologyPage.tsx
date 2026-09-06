@@ -46,7 +46,6 @@ const TEAM_STATS: StatEntry[] = [
     question: 'How is our special teams unit actually functioning beyond just Corsi?',
     formula: 'PP Shots/min = PP shots ÷ PP minutes · PP OZ Ratio = PP time in OZ ÷ total PP time · PK Opp-Breakout Rate = opp breakouts allowed ÷ number of PKs',
     whyNotGoals: 'Existing CF%/xGF% only says whether we had the puck. These three stats add: efficiency (are we generating shots per minute of PP time?), setup quality (how much PP time is actually in the offensive zone vs. getting cleared?), and PK forecheck effectiveness (how often does the opposing PP break out of their zone against our forecheck?). Together they tell a story about whether the units are structurally working, not just whether they controlled the puck.',
-    status: 'planned',
     sourceNote: 'Requires InStat data (PP time-in-zone tracking is not exposed by 49ing).',
     limitations: [
       'All three require InStat weeks to compute — not available on 49ing-only games.',
@@ -99,7 +98,6 @@ const PLAYER_STATS: StatEntry[] = [
     question: "One number: how much is this player helping the team win, controlling for her position?",
     formula: 'Impact_game = mean( z_position(on-ice xGF60 − xGA60), z_position(on-ice CF%), z_position(puck battle W%*), z_position(controlled entry %*) ) · Impact_season = TOI-weighted mean of per-game values, clamped to [−3, +3] · *InStat-only components dropped when absent',
     whyNotGoals: 'Standard plus/minus counts goals during 5v5 — a tiny event count in a 28-game season, heavily distorted by save quality and randomness. Impact Score uses shot-based signals (xG, Corsi, puck battle W%) that have 10–50× the event volume per game and stabilize far faster. Each component is z-normalized within the player\'s position group so forwards are compared to forwards, defenders to defenders. Hover on the score in the report to see the component breakdown.',
-    status: 'planned',
     sourceNote: 'Both sources supported. Component availability depends on source: puck battle W% and controlled entry % require InStat.',
     limitations: [
       'Not adjusted for teammate quality — no WOWY (with-or-without-you) data available from either platform.',
@@ -115,7 +113,6 @@ const PLAYER_STATS: StatEntry[] = [
     question: "How often does she come out with the puck when it's up for grabs?",
     formula: 'PB Win % = Σ pb_won ÷ Σ pb_total across all zones · Zone splits: PB DZ % / PB OZ % / PB NZ % follow same pattern within each zone',
     whyNotGoals: 'Puck battles are the closest measurable proxy for "grinder" performance — winning duels for loose pucks. Overall PB% is role-dependent (defenders spend more time in the DZ; their DZ% matters most). Showing zone splits lets the coach separate a slot-clearing D from a puck-hog forward.',
-    status: 'planned',
     sourceNote: 'InStat only — 49ing does not expose puck battles.',
     limitations: [
       'Does not measure difficulty of the battle — a puck battle in the slot is not equivalent to one at the blue line, but they count equally here.',
@@ -128,7 +125,6 @@ const PLAYER_STATS: StatEntry[] = [
     question: 'How does this player get into the offensive zone — carrying, passing, or dumping?',
     formula: 'Entry Pass % = entries via pass ÷ total entries · Entry Stick % = entries via stickhandling ÷ total entries · Entry Dump % = entries via dump-in ÷ total entries',
     whyNotGoals: 'Historical (NHL) research shows carry-in entries produce ~2× the shots per entry that dump-ins do. Entry composition reveals role and skill — a high-Stick% forward is carrying the puck, a high-Pass% forward is setting up entries for teammates, a high-Dump% forward is playing conservatively or being overmatched.',
-    status: 'planned',
     sourceNote: 'InStat only.',
     limitations: [
       'Does not measure what happened after the entry — a failed carry and a successful dump are weighted equally.',
@@ -140,7 +136,6 @@ const PLAYER_STATS: StatEntry[] = [
     question: "Where does she lose the puck — where it's cheap, or where it hurts?",
     formula: 'DZ Loss Share = puck losses in DZ ÷ total puck losses · OZ Recovery Share = puck recoveries in OZ ÷ total puck recoveries',
     whyNotGoals: 'Raw turnover count is misleading. OZ losses are largely acceptable — aggressive plays fail. DZ losses become chances against and shift momentum. A player with 6 total losses but 5 in the DZ is a bigger concern than one with 12 losses but 1 in the DZ. Same asymmetry for recoveries: OZ recoveries create chances; DZ recoveries just prevent them.',
-    status: 'planned',
     sourceNote: 'InStat only.',
     limitations: [
       'Does not weight losses by resulting danger — a DZ loss at the point is not the same as one below the goal line.',
@@ -152,11 +147,11 @@ const PLAYER_STATS: StatEntry[] = [
     question: "Of the team's high-danger shots, how many is this player taking?",
     formula: 'Danger Share % = player\'s shots from scoring-chance area ÷ team\'s shots from scoring-chance area · Danger Shots/60 = player\'s SCA shots × 60 ÷ TOI',
     whyNotGoals: 'A player with 8 shots all from the point contributes less to expected goals than a player with 3 shots all from the slot. Danger Share identifies who\'s actually shooting from where goals get scored, independent of total shot volume. Complements Individual Shot Attempts (ICF) with a quality dimension.',
-    status: 'planned',
     sourceNote: 'InStat uses "shots from scoring chance area." 49ing fallback: slot-zone shot count.',
     limitations: [
       'Does not sub-differentiate within the scoring-chance zone — a shot from the crease and a shot from the top of the slot count equally.',
       'Team-relative denominator means the number shifts based on teammates\' shot selection, not just this player\'s.',
+      'A player who missed games where the team recorded high-danger shots will have their share understated — the denominator includes all team games in the window, not just games this player appeared in.',
     ],
   },
   {
@@ -217,7 +212,6 @@ const ANALYTICAL_LAYERS: StatEntry[] = [
     question: "Is she above or below average — for her role specifically, not just team-wide?",
     formula: 'Team Baseline = mean of stat across all players in the window (TOI-weighted for per-60 stats) · Position Baseline = same, filtered to player\'s position group (F / C / W / D / G)',
     whyNotGoals: 'A team-wide baseline flatters defenders on offensive stats and forwards on defensive stats, because the roles produce systematically different numbers. Position-aware comparison shows two deltas — vs. team, and vs. position — and a colored indicator (green if better than both, yellow if better than one, red if below both). Faceoff stats compare to centers only; general stats compare to the appropriate positional group.',
-    status: 'planned',
     sourceNote: 'Works on any stat, either source.',
     limitations: [
       'Small position cohorts (e.g., 6 defenders) produce noisier baselines than the full team cohort.',
@@ -229,7 +223,6 @@ const ANALYTICAL_LAYERS: StatEntry[] = [
     question: "Is she getting more or less ice time lately? Was tonight's TOI unusual?",
     formula: 'Rolling trend: (toi_L3 − toi_L10) ÷ toi_L10 → ±10% triggers ⬆/⬇ trend badge · Single-game outlier: game_toi ÷ toi_L10 < 0.50 → "reduced role" badge · > 1.50 → "expanded role" badge',
     whyNotGoals: 'Ice-time shifts are the most direct signal of coach decisions — benching, injury, promotion up the lines. Two independent triggers: a rolling window (are the last 3 games trending different from her usual?) and a single-game outlier (was tonight abnormal?). Rolling trend catches slow drifts; single-game outlier catches sharp one-offs.',
-    status: 'planned',
     sourceNote: 'Uses TOI, which either source provides.',
     limitations: [
       'Requires at least 10 games of history before the trend flag can fire.',
@@ -242,7 +235,6 @@ const ANALYTICAL_LAYERS: StatEntry[] = [
     question: 'What has meaningfully shifted for this player lately that I should look at?',
     formula: 'For each configured rule (stat, window, baseline, z_threshold): baseline_mean, baseline_std = TOI-weighted stats over last {baseline} games · window_mean = TOI-weighted mean over last {window} games · z = (window_mean − baseline_mean) ÷ baseline_std · flag if |z| > z_threshold',
     whyNotGoals: 'Numbers on a page are passive — the coach has to hunt for what changed. The auto-flag engine inverts that: it scans configured stats (xGF%, CF60, xFSh%, etc.) against each player\'s own recent baseline, and surfaces anything more than ~1 standard deviation off. Player report shows 0–3 badges at the top ("xG% shift", "Corsi shift") that jump to the relevant stat block on click.',
-    status: 'planned',
     sourceNote: 'Works on any stat with sufficient history, either source.',
     limitations: [
       'Requires ≥ {baseline} games of history — no flags in the first ~10 games of a season.',

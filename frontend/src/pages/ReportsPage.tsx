@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getPlayers, getAllPlayerAggStats, getGames, downloadPlayerReport, downloadTeamReport, exportAllData, getPlayerAggStats } from '../api/client'
-import type { Player, PlayerAggStats, Game } from '../types'
+import { getPlayers, getAllPlayerAggStats, getGames, downloadPlayerReport, downloadTeamReport, exportAllData, getPlayerAggStats, getTeamAggStats } from '../api/client'
+import type { Player, PlayerAggStats, TeamAggStats, Game } from '../types'
 import SmallSampleBadge from '../components/SmallSampleBadge'
 import FlagPanel from '../components/FlagPanel'
 import ComparisonRow from '../components/ComparisonRow'
 import GameFlagBadge from '../components/GameFlagBadge'
+import StatCard from '../components/StatCard'
+import PuckBattleBlock from '../components/PuckBattleBlock'
+import EntryCompositionBar from '../components/EntryCompositionBar'
+import ImpactScoreCard from '../components/ImpactScoreCard'
 
 function fmt(v: number | null, mult = 100, dec = 1): string {
   if (v === null || v === undefined) return '—'
@@ -55,6 +59,7 @@ export default function ReportsPage() {
   const [exporting, setExporting] = useState(false)
   const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null)
   const [detailAggs, setDetailAggs] = useState<Record<number, PlayerAggStats>>({})
+  const [teamAgg, setTeamAgg] = useState<TeamAggStats | null>(null)
 
   // Filter state
   const [preset, setPreset] = useState<Preset>('all')
@@ -73,13 +78,15 @@ export default function ReportsPage() {
 
   const refreshStats = useCallback(() => {
     setStatsLoading(true)
-    getAllPlayerAggStats(dateFrom, dateTo)
-      .then(aggs => {
-        const map: Record<number, PlayerAggStats> = {}
-        aggs.forEach(a => { map[a.player_id] = a })
-        setAggStats(map)
-      })
-      .finally(() => setStatsLoading(false))
+    Promise.all([
+      getAllPlayerAggStats(dateFrom, dateTo),
+      getTeamAggStats(dateFrom, dateTo),
+    ]).then(([aggs, tAgg]) => {
+      const map: Record<number, PlayerAggStats> = {}
+      aggs.forEach(a => { map[a.player_id] = a })
+      setAggStats(map)
+      setTeamAgg(tAgg)
+    }).finally(() => setStatsLoading(false))
   }, [dateFrom, dateTo])
 
   useEffect(() => {
@@ -241,6 +248,28 @@ export default function ReportsPage() {
         </button>
       </div>
 
+      {teamAgg && teamAgg.special_teams_v2 && teamAgg.special_teams_v2.games > 0 && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 14, marginBottom: 12, color: 'var(--text-secondary)' }}>
+            Special Teams (Advanced)
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <StatCard
+              label="PP Shots/min"
+              primary={teamAgg.special_teams_v2.pp_shots_per_min === null ? '—' : teamAgg.special_teams_v2.pp_shots_per_min.toFixed(2)}
+            />
+            <StatCard
+              label="PP OZ Ratio"
+              primary={teamAgg.special_teams_v2.pp_oz_ratio === null ? '—' : `${(teamAgg.special_teams_v2.pp_oz_ratio * 100).toFixed(1)}%`}
+            />
+            <StatCard
+              label="PK Opp-Breakout Rate"
+              primary={teamAgg.special_teams_v2.pk_opp_breakout_rate === null ? '—' : teamAgg.special_teams_v2.pk_opp_breakout_rate.toFixed(2)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Player reports */}
       <div className="section-divider">Player Reports</div>
       {players.length === 0 && (
@@ -332,6 +361,55 @@ export default function ReportsPage() {
                           return <ComparisonRow key={key} label={meta.label} comparison={cmp} unit={meta.unit} />
                         })}
                       </div>
+                      {(() => {
+                        const agg = detailAggs[p.id]
+                        return (
+                          <>
+                            {agg.impact_score && agg.impact_score.games > 0 && (
+                              <ImpactScoreCard data={agg.impact_score} />
+                            )}
+                            <PuckBattleBlock data={agg.contested_puck} />
+                            <EntryCompositionBar data={agg.zone_entry} />
+
+                            {agg.turnover_ratio && agg.turnover_ratio.games > 0 && (
+                              <div style={{ marginTop: 16 }}>
+                                <h3 style={{ fontSize: 14, marginBottom: 8, color: 'var(--text-secondary)' }}>
+                                  Turnover Location
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                                  <StatCard
+                                    label="DZ Loss Share"
+                                    primary={agg.turnover_ratio.dz_loss_share === null ? '—' : `${(agg.turnover_ratio.dz_loss_share * 100).toFixed(1)}%`}
+                                  />
+                                  <StatCard
+                                    label="OZ Recovery Share"
+                                    primary={agg.turnover_ratio.oz_recovery_share === null ? '—' : `${(agg.turnover_ratio.oz_recovery_share * 100).toFixed(1)}%`}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {agg.danger_share && agg.danger_share.games > 0 && (
+                              <div style={{ marginTop: 16 }}>
+                                <h3 style={{ fontSize: 14, marginBottom: 8, color: 'var(--text-secondary)' }}>
+                                  Danger-Zone Shot Share
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                                  <StatCard
+                                    label="Share of Team HD Shots"
+                                    primary={agg.danger_share.share_pct === null ? '—' : `${(agg.danger_share.share_pct * 100).toFixed(1)}%`}
+                                  />
+                                  <StatCard
+                                    label="HD Shots/60"
+                                    primary={agg.danger_share.shots_per_60 === null ? '—' : agg.danger_share.shots_per_60.toFixed(2)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
+
                       <div style={{ marginTop: 24 }}>
                         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
                           Game Log
