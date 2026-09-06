@@ -1,10 +1,12 @@
 # ECAC Stats Expansion — Design Spec
 
-**Date:** 2026-08-18 (amended 2026-09-01)
+**Date:** 2026-08-18 (amended 2026-09-01, 2026-09-06)
 **Author:** Raymond Jiang (w/ Claude)
 **Status:** Approved for planning
 
 **2026-09-01 amendment:** Phase 2 ingest is descoped to InStat-PDF-only (no Claude vision, no paid API dependencies — this is a free tool). `PlayerPassMatrix` and `PlayerHitMatrix` tables move from Phase 5 into Phase 2 (PDF parsing extracts them at no marginal cost). Review UI simplified to editable form (no split-screen PDF preview). See §4 for revised ingest design.
+
+**2026-09-06 amendment:** Phase 4 split — goalie stats (§9.10) deferred to Phase 4b once per-goalie InStat data is available. Phase 4 ships Shot Threat by Scenario (§9.11) and Defensive Disruption Index (§9.9). Rulings: (1) DDI's "takeaways" component uses InStat `puck_recoveries` as proxy — InStat does not expose takeaways as a distinct field, and puck recoveries are the closest semantic equivalent (winning a loose puck). (2) Shot Threat UI ships as a static compact view; interactive filter chips deferred until coach usage confirms which filters matter. New table `PlayerGameShotsInStat` holds per-player shots-page (P6/14) data. Phase 3's `danger_zone_shot_share` `r.shots` proxy is replaced with true SCA counts from this new table.
 
 ---
 
@@ -175,11 +177,11 @@ Reports are 19 pages, symmetric per team. Page 1 is a TOC; page 2 is match-wide 
 | `CHALLENGES: <our team>` | `instat_challenges` | `PlayerGameStatsInStat` pb_* fields |
 | `HITS DISTRIBUTION: <our team>` | `instat_hit_matrix` | `PlayerHitMatrix` |
 | `PASSES DISTRIBUTION: <our team>` | `instat_pass_matrix` | `PlayerPassMatrix` |
+| `SHOTS: <our team>` (Phase 4) | `instat_shots` | `PlayerGameShotsInStat` (new) — per-player shot counts by strength / location / context / type |
 
 Skipped for now (documented, not parsed):
 - Cover page (P1) — no data.
 - Line combinations (P4/12) — no downstream consumer yet.
-- Shots log (P6/14) — needed for Tier 3 shot-threat stats; parse in Phase 4.
 - Challenge distribution matrix (P8/16) — no downstream consumer.
 - Notes and glossary (P19) — no data.
 
@@ -516,19 +518,22 @@ game_ratio = game_toi ÷ toi_L10
 > *"Composite estimate of a player's off-puck defensive activity."*
 
 ```
-DDI/60 = (takeaways + shots blocked + DZ puck battles won) × 60 ÷ TOI
+DDI/60 = (puck_recoveries + shots_blocked_defensively + DZ puck battles won) × 60 ÷ TOI
 ```
 
 Season: TOI-weighted mean of per-game DDI/60.
 
-**Labeled clearly as a composite proxy, not a direct measurement.** UI footnote: "Combines takeaways, blocks, and DZ puck battles won per 60 minutes. Approximation of off-puck defensive contribution; does not directly measure stick disruption."
+**Ruling (2026-09-06):** InStat does not expose "takeaways" as a distinct field. `puck_recoveries` is used as the takeaways proxy — it captures the closest semantic action (securing a loose puck the opponent last controlled). This is a composite proxy already; the substitution keeps the stat operational without adding a dependency on unavailable data. Puck battles won are NOT reused here because they already drive Impact Score's `z_battle` — double-counting would inflate DDI for the same activity.
 
-**Source:** blocks + takeaways from either; DZ puck battles from InStat only (component drops to 0 on 49ing weeks — indicated in UI).
+**Labeled clearly as a composite proxy, not a direct measurement.** UI footnote: "Combines puck recoveries, defensive blocks, and DZ puck battles won per 60 minutes. Approximation of off-puck defensive contribution; does not directly measure stick disruption."
+
+**Source:** All three components require InStat. Not computable on 49ing-only weeks (returns N/A rather than partial value).
 
 **Limitations:**
 - Composite of three loosely related activities.
 - Doesn't measure positioning or gap control.
 - Rewards volume; penalizes minimal-mistake defenders.
+- `puck_recoveries` is a proxy for takeaways (see ruling above) — a player who wins many contested pucks (PB wins) but doesn't recover loose ones will underscore.
 
 ### 9.10 Goalie Stats (coach ask #8)
 
@@ -551,17 +556,19 @@ HD SV% = 1 - (goals from HD area ÷ HD shots faced)    [InStat only]
 
 ### 9.11 Shot Threat by Scenario, All Players (coach ask #3)
 
-Per-player shots view gains filters:
-- Location: slot / center / flank / blue line
-- Context: positional attack / counter-attack ("off the rush")
-- Strength: 5v5 / PP / SH
+Per-player shot breakdowns across three axes:
+- **Location:** slot / center / right flank / left flank / blue line right / blue line center / blue line left (7 zones per InStat's PDF classification)
+- **Context:** positional attack / counter-attack ("off the rush")
+- **Strength:** 5v5 (implicit — total minus PP/SH) / PP / SH
 
-For each filter combination:
+For each breakdown:
 ```
 Shots/60    = filtered shots × 60 ÷ TOI at strength
 On-Goal %   = shots on goal ÷ total shots
 Shooting %  = goals ÷ shots on goal
 ```
+
+**Phase 4 UI ruling (2026-09-06):** Ships as a **static compact view** — one block per player displaying the key breakdowns (e.g., "Slot: 5/2 · Flank: 8/5 · Rush: 3/2 · PP: 6/4 · Slap/Wrist: 4/12"). Interactive filter chips deferred until coach usage confirms which filters they actually reach for. This trades exploratory power for shipping speed and lets us learn the real usage patterns before building interaction state.
 
 **Source:** InStat only.
 
@@ -585,10 +592,11 @@ Position group per stat configured in rules file alongside flag engine.
 |---|---|---|---|
 | **0** | Schema migration (option B) + aggregation layer + source flag | ~4 days | ✅ shipped |
 | **1** | Tier 1 quick wins (position comparisons, TOI flags, auto-flag engine) | ~1 week | ✅ shipped |
-| **2** | InStat PDF ingest — 6 templates + `PlayerHitMatrix` / `PlayerPassMatrix` tables + review UI | ~1–1.5 weeks | next |
-| **3** | Tier 2 stats (contested puck, Impact Score, ST v2, entry composition, turnover ratio, danger share) | ~2 weeks | after Phase 2 |
-| **4** | Tier 3 stats (shot threat by scenario, disruption index, goalie) — includes InStat shots-log parser | ~1.5 weeks | after Phase 3 |
-| **5** | Matrix visualizations (pass connectivity map, hit engagement profile, pass isolation flag) — matrix data already stored by Phase 2 | ~1 week | after Phase 4 |
+| **2** | InStat PDF ingest — 6 templates + `PlayerHitMatrix` / `PlayerPassMatrix` tables + review UI | ~1–1.5 weeks | ✅ shipped |
+| **3** | Tier 2 stats (contested puck, Impact Score, ST v2, entry composition, turnover ratio, danger share) | ~2 weeks | ✅ shipped |
+| **4** | Tier 3 stats — Shot Threat by Scenario + DDI + `instat_shots` parser + `PlayerGameShotsInStat` table. Danger-share proxy replaced with true SCA. Goalie deferred to 4b. | ~1 week | next |
+| **4b** | Goalie stats (SV%, GA/60, HD SV%) — requires per-goalie InStat data source (may need a different report or fixture) | ~2–3 days | after Phase 4 |
+| **5** | Matrix visualizations (pass connectivity map, hit engagement profile, pass isolation flag) — matrix data already stored by Phase 2 | ~1 week | after Phase 4b |
 | **6** | Chatbot — own design pass | ~2–3 weeks | independent |
 
 **Rough total to feature-complete (excluding chatbot):** ~6.5 weeks remaining. +2–3 weeks for chatbot.
@@ -618,13 +626,15 @@ This makes the methodology page a single source of truth from day one, so the co
 - **Flag thresholds** — 10%/z=1.0 defaults are guesses. Expect to tune after Phase 1 with real data.
 - **Single-game outlier thresholds** (50% / 150% of L10) — same, may tune.
 - **Attack scenario coverage on 49ing** — currently only team-level xG per scenario is exposed. If 49ing ever exposes per-player scenario data, coach ask #3 becomes source-agnostic (currently InStat-only).
-- **Second goalie or more** — the goalie personal-stat block assumes multiple goalies play. Verify roster reflects this before Phase 4.
-- **InStat template drift** — if InStat changes their PDF layout between seasons, all six parsers may need updates. Golden-fixture tests will catch this on the first game of a new season.
+- **Second goalie or more** — the goalie personal-stat block assumes multiple goalies play. Verify roster reflects this before Phase 4b.
+- **Per-goalie InStat data source** — the sample match-report PDF shows only team-level shots-against; per-goalie shot totals may require a different InStat report or a second fixture. Verify data availability before starting Phase 4b.
+- **InStat template drift** — if InStat changes their PDF layout between seasons, all seven parsers may need updates. Golden-fixture tests will catch this on the first game of a new season.
 
 ---
 
 ## 13. Deferred — do not lose track of
 
-1. Pass connectivity / hit engagement visualizations (Phase 5). Matrix data now stored by Phase 2; only the UI remains.
-2. InStat shots-log parser + shot-threat-by-scenario stats (Phase 4 / §9.11).
-3. Chatbot design (§8, Phase 6).
+1. Pass connectivity / hit engagement visualizations (Phase 5). Matrix data stored by Phase 2; only the UI remains.
+2. Goalie stats (Phase 4b / §9.10). Deferred from Phase 4 pending confirmation of per-goalie InStat data availability.
+3. Interactive filter chips for Shot Threat by Scenario (§9.11). Deferred from Phase 4 in favor of static compact view; revisit once coach usage reveals which filters matter.
+4. Chatbot design (§8, Phase 6).
