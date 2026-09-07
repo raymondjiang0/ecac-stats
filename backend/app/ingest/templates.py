@@ -9,6 +9,7 @@ from .parsers.time_distribution import parse_time_distribution
 from .parsers.challenges import parse_challenges
 from .parsers.hit_matrix import parse_hit_matrix
 from .parsers.pass_matrix import parse_pass_matrix
+from .parsers.shots import parse_shots
 
 
 TEMPLATES = {
@@ -18,4 +19,5 @@ TEMPLATES = {
     "instat_challenges": parse_challenges,
     "instat_hit_matrix": parse_hit_matrix,
     "instat_pass_matrix": parse_pass_matrix,
+    "instat_shots": parse_shots,
 }

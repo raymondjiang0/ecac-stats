@@ -5,10 +5,11 @@ FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "instat_sample.pdf
 
 
 class TestTemplates:
-    def test_has_all_six_templates(self):
+    def test_has_all_seven_templates(self):
         expected = {
             "instat_team_stats", "instat_players_main", "instat_time_distribution",
             "instat_challenges", "instat_hit_matrix", "instat_pass_matrix",
+            "instat_shots",
         }
         assert set(TEMPLATES.keys()) == expected
 
@@ -20,6 +21,7 @@ class TestParseAll:
         assert set(result["templates"].keys()) == {
             "instat_team_stats", "instat_players_main", "instat_time_distribution",
             "instat_challenges", "instat_hit_matrix", "instat_pass_matrix",
+            "instat_shots",
         }
 
     def test_returns_warnings_list(self):
