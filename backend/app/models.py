@@ -225,3 +225,60 @@ class PlayerPassMatrix(Base):
     count = Column(Integer, nullable=False, default=0)
 
     __table_args__ = (UniqueConstraint("game_id", "from_player_id", "to_player_id"),)
+
+
+class PlayerGameShotsInStat(Base):
+    __tablename__ = "player_game_shots_instat"
+
+    id = Column(Integer, primary_key=True, index=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+
+    __table_args__ = (UniqueConstraint("player_id", "game_id"),)
+
+    # Basic
+    goals = Column(Integer, nullable=True)
+    shots_total = Column(Integer, nullable=True)
+    shots_on_goal = Column(Integer, nullable=True)
+
+    # Defensive — opponent shots this player blocked. Distinct from
+    # PlayerGameStatsInStat.blocked_shots (which is unpopulated and
+    # semantically means "shots this player took that got blocked").
+    shots_blocked_defensively = Column(Integer, nullable=True)
+
+    # Strength-state
+    pp_shots_total = Column(Integer, nullable=True)
+    pp_shots_on_goal = Column(Integer, nullable=True)
+    sh_shots_total = Column(Integer, nullable=True)
+    sh_shots_on_goal = Column(Integer, nullable=True)
+
+    # Context
+    positional_shots_total = Column(Integer, nullable=True)
+    positional_shots_on_goal = Column(Integer, nullable=True)
+    counter_shots_total = Column(Integer, nullable=True)
+    counter_shots_on_goal = Column(Integer, nullable=True)
+
+    # Location — 7 zones per InStat's PDF classification
+    slot_shots_total = Column(Integer, nullable=True)
+    slot_shots_on_goal = Column(Integer, nullable=True)
+    center_shots_total = Column(Integer, nullable=True)
+    center_shots_on_goal = Column(Integer, nullable=True)
+    right_flank_shots_total = Column(Integer, nullable=True)
+    right_flank_shots_on_goal = Column(Integer, nullable=True)
+    left_flank_shots_total = Column(Integer, nullable=True)
+    left_flank_shots_on_goal = Column(Integer, nullable=True)
+    blue_line_right_shots_total = Column(Integer, nullable=True)
+    blue_line_right_shots_on_goal = Column(Integer, nullable=True)
+    blue_line_center_shots_total = Column(Integer, nullable=True)
+    blue_line_center_shots_on_goal = Column(Integer, nullable=True)
+    blue_line_left_shots_total = Column(Integer, nullable=True)
+    blue_line_left_shots_on_goal = Column(Integer, nullable=True)
+
+    # Shot type
+    slapshot_total = Column(Integer, nullable=True)
+    slapshot_on_goal = Column(Integer, nullable=True)
+    wristshot_total = Column(Integer, nullable=True)
+    wristshot_on_goal = Column(Integer, nullable=True)
+
+    player = relationship("Player")
+    game = relationship("Game")
