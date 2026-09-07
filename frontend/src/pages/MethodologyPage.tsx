@@ -157,15 +157,15 @@ const PLAYER_STATS: StatEntry[] = [
   {
     name: 'Defensive Disruption Index (DDI/60)',
     question: "How active is she off-puck defensively — how often is she taking pucks away and getting in shooting lanes?",
-    formula: 'DDI/60 = (takeaways + shots blocked + DZ puck battles won) × 60 ÷ TOI · Season aggregate: TOI-weighted mean of per-game DDI/60',
-    whyNotGoals: 'No single tracked stat measures "stick work" or "off-puck disruption" directly. DDI is a composite proxy combining three related activities — takeaways (winning the puck without contact), blocks (getting in shooting lanes), and defensive-zone puck battles won (successful contested-puck plays in your own end). Explicitly a proxy, not a measurement.',
-    status: 'planned',
+    formula: 'DDI/60 = (puck recoveries + shots blocked defensively + DZ puck battles won) × 60 ÷ TOI · Season aggregate: TOI-weighted mean of per-game DDI/60',
+    whyNotGoals: 'No single tracked stat measures "stick work" or "off-puck disruption" directly. DDI is a composite proxy combining three related activities — puck recoveries (securing a loose puck the opponent last controlled — used as the takeaways proxy per the 2026-09-06 ruling; InStat does not expose takeaways as a distinct field), blocks (getting in shooting lanes), and defensive-zone puck battles won (successful contested-puck plays in your own end). Explicitly a proxy, not a measurement.',
     sourceNote: 'Blocks and takeaways from either source; DZ puck battles from InStat only (component drops to 0 on 49ing weeks, indicated in the UI).',
     limitations: [
       'A composite of three loosely related activities — a high DDI does not mean elite defender in the abstract.',
       'Does not measure positioning or gap control (both invisible in the underlying data).',
       'Rewards volume, which penalizes minimal-mistake defenders who quietly prevent situations from developing.',
       'On 49ing-only weeks, the DZ puck battles component drops to zero, so the score is systematically lower and not comparable across source splits.',
+      '"Takeaways" component uses puck_recoveries as a proxy — a player who wins many contested pucks (PB wins) but doesn\'t recover loose ones will underscore. See spec §9.9 2026-09-06 ruling.',
     ],
   },
   {
@@ -173,12 +173,12 @@ const PLAYER_STATS: StatEntry[] = [
     question: 'Where and how is each player generating shots — off the rush, from the slot, on the power play?',
     formula: 'Filter chips: location (slot / center / flank / blue line), context (positional / counter-attack / "off the rush"), strength (5v5 / PP / SH) · Per filter combo: Shots/60 = filtered shots × 60 ÷ TOI at that strength · SH% = goals ÷ shots on goal',
     whyNotGoals: 'Aggregate shot totals hide structure. A forward with 30 shots in 10 games might have 25 of them from the point (low value) or 20 of them off the rush (high value); the totals look identical. Shot-threat filtering lets the coach see where and how a player generates offense.',
-    status: 'planned',
     sourceNote: 'InStat only — 49ing does not expose per-player attack scenario or shot location.',
     limitations: [
       'SH% (shooting percentage) needs 200+ shots to stabilize; most players won\'t reach that in a 28-game season.',
       '"Off the rush" is proxied by InStat\'s "counter-attack" classification, which is close but not identical.',
       'N/A on 49ing weeks.',
+      'Shipped as static compact view per Phase 4 UI ruling. Interactive filter chips deferred; if a specific filter combination is not shown, the underlying data is captured per-game and can be surfaced when needs are clear.',
     ],
   },
   {
