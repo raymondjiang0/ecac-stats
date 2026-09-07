@@ -40,19 +40,20 @@ from ..pdf_nav import find_section_page, SHOTS_SECTION
 
 # ── x-coordinate windows for each column ─────────────────────────────────────
 # Each tuple is (x_min, x_max) for that column's data tokens
+# Ranges are non-overlapping: each pair's shared boundary is (old_max + new_min) // 2
 _COL_GOALS = (78, 100)
-_COL_SHOTS = (105, 165)          # shots total/on-goal x/y pair
-_COL_SHOTS_BLOCK = (158, 195)    # shots blocking (single int)
-_COL_PP = (188, 245)             # power play x/y pair
-_COL_SH = (237, 275)             # short-handed x/y pair
-_COL_POSITIONAL = (265, 325)     # in positional attacks x/y pair
+_COL_SHOTS = (105, 161)          # shots total/on-goal x/y pair
+_COL_SHOTS_BLOCK = (161, 191)    # shots blocking (single int)
+_COL_PP = (191, 241)             # power play x/y pair
+_COL_SH = (241, 270)             # short-handed x/y pair
+_COL_POSITIONAL = (270, 325)     # in positional attacks x/y pair
 _COL_COUNTER = (315, 372)        # in counter-attacks x/y pair
 _COL_SLOT = (362, 420)           # slot x/y pair
 _COL_CENTER = (410, 470)         # center x/y pair
 _COL_RIGHT_FLANK = (460, 520)    # right flank x/y pair
-_COL_LEFT_FLANK = (508, 548)     # left flank x/y pair
-_COL_BL_RIGHT = (537, 594)       # blue line right x/y pair
-_COL_BL_CENTER = (584, 645)      # blue line center x/y pair
+_COL_LEFT_FLANK = (508, 542)     # left flank x/y pair
+_COL_BL_RIGHT = (542, 589)       # blue line right x/y pair
+_COL_BL_CENTER = (589, 645)      # blue line center x/y pair
 _COL_BL_LEFT = (634, 692)        # blue line left x/y pair
 _COL_SLAPSHOT = (682, 745)       # slapshot x/y pair
 _COL_WRISTSHOT = (735, 820)      # wrist shot x/y pair
@@ -329,34 +330,3 @@ def _extract_shot_rows(words: list) -> list[dict]:
         records.append(row)
 
     return records
-
-
-def _parse_x_y_pair(tokens: list[str], idx: int) -> tuple[int | None, int | None, int]:
-    """Parse one 'x/y' or 'x/y z%' pair starting at tokens[idx].
-
-    Returns (x, y, new_idx). Handles bare em-dash (returns None, None, idx+1).
-    Advances past the optional '%' token.
-    """
-    if idx >= len(tokens):
-        return None, None, idx
-    tok = tokens[idx]
-    if tok in ("—", "-"):
-        return None, None, idx + 1
-    m = re.match(r"^(\d+)/(\d+)$", tok)
-    if not m:
-        return None, None, idx + 1
-    x, y = int(m.group(1)), int(m.group(2))
-    new_idx = idx + 1
-    # Consume optional '%' token
-    if new_idx < len(tokens) and tokens[new_idx].endswith("%"):
-        new_idx += 1
-    return x, y, new_idx
-
-
-def _parse_int_or_none(tok: str) -> int | None:
-    if tok in ("—", "-"):
-        return None
-    try:
-        return int(tok)
-    except ValueError:
-        return None
