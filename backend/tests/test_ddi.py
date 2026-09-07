@@ -89,3 +89,14 @@ class TestDefensiveDisruptionIndex:
         assert r["components"]["dz_pb_wins"] == 2
         # 12 × 60 / 30 = 24
         assert r["ddi_per_60"] == pytest.approx(24.0)
+
+    def test_zero_valued_component_still_counts_as_game(self):
+        """Zero values are valid data — a game with puck_recoveries=0 and
+        pb_won_dz=0 (both non-None) should count as 1 game, not 0."""
+        pgs = [_pgs(toi_5v5=15.0)]
+        instat = [_instat(puck_recoveries=0, pb_won_dz=0)]
+        shots = [_shots(shots_blocked_defensively=0)]
+        r = defensive_disruption_index(pgs, instat, shots)
+        assert r["games"] == 1
+        # All three components are 0, all have_data flags True → ddi_per_60 = 0.0
+        assert r["ddi_per_60"] == pytest.approx(0.0)

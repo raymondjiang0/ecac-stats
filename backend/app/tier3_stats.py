@@ -152,7 +152,7 @@ def defensive_disruption_index(
         if r.pb_won_dz is not None:
             dz_pb += r.pb_won_dz
             dz_pb_has_data = True
-        if r.puck_recoveries or r.pb_won_dz:
+        if r.puck_recoveries is not None or r.pb_won_dz is not None:
             games += 1
 
     for r in shots_rows:
