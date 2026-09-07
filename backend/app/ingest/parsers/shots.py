@@ -46,17 +46,17 @@ _COL_SHOTS = (105, 161)          # shots total/on-goal x/y pair
 _COL_SHOTS_BLOCK = (161, 191)    # shots blocking (single int)
 _COL_PP = (191, 241)             # power play x/y pair
 _COL_SH = (241, 270)             # short-handed x/y pair
-_COL_POSITIONAL = (270, 325)     # in positional attacks x/y pair
-_COL_COUNTER = (315, 372)        # in counter-attacks x/y pair
-_COL_SLOT = (362, 420)           # slot x/y pair
-_COL_CENTER = (410, 470)         # center x/y pair
-_COL_RIGHT_FLANK = (460, 520)    # right flank x/y pair
-_COL_LEFT_FLANK = (508, 542)     # left flank x/y pair
+_COL_POSITIONAL = (270, 320)     # in positional attacks x/y pair
+_COL_COUNTER = (320, 367)        # in counter-attacks x/y pair
+_COL_SLOT = (367, 415)           # slot x/y pair
+_COL_CENTER = (415, 465)         # center x/y pair
+_COL_RIGHT_FLANK = (465, 514)    # right flank x/y pair
+_COL_LEFT_FLANK = (514, 542)     # left flank x/y pair
 _COL_BL_RIGHT = (542, 589)       # blue line right x/y pair
-_COL_BL_CENTER = (589, 645)      # blue line center x/y pair
-_COL_BL_LEFT = (634, 692)        # blue line left x/y pair
-_COL_SLAPSHOT = (682, 745)       # slapshot x/y pair
-_COL_WRISTSHOT = (735, 820)      # wrist shot x/y pair
+_COL_BL_CENTER = (589, 639)      # blue line center x/y pair
+_COL_BL_LEFT = (639, 687)        # blue line left x/y pair
+_COL_SLAPSHOT = (687, 740)       # slapshot x/y pair
+_COL_WRISTSHOT = (740, 820)      # wrist shot x/y pair
 
 # Jersey numbers: short digit tokens at left margin (~33)
 _JERSEY_X_MAX = 40
@@ -258,6 +258,10 @@ def _extract_shot_rows(words: list) -> list[dict]:
             # Stop looking if we hit another jersey row
             if look_left["x0"] <= _JERSEY_X_MAX and _JERSEY_RE.match(look_left["text"]):
                 break
+
+        # Defensive sort to ensure combined_words is x0-sorted
+        # (input sources are individually sorted, but merged fragment may not be globally sorted)
+        combined_words.sort(key=lambda w: w["x0"])
 
         row = _empty_row()
         row["jersey_number"] = jersey
