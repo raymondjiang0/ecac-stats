@@ -9,6 +9,7 @@ import StatCard from '../components/StatCard'
 import PuckBattleBlock from '../components/PuckBattleBlock'
 import EntryCompositionBar from '../components/EntryCompositionBar'
 import ImpactScoreCard from '../components/ImpactScoreCard'
+import ShotThreatBlock from '../components/ShotThreatBlock'
 
 function fmt(v: number | null, mult = 100, dec = 1): string {
   if (v === null || v === undefined) return '—'
@@ -403,6 +404,31 @@ export default function ReportsPage() {
                                     label="HD Shots/60"
                                     primary={agg.danger_share.shots_per_60 === null ? '—' : agg.danger_share.shots_per_60.toFixed(2)}
                                   />
+                                </div>
+                              </div>
+                            )}
+
+                            {agg.shot_threat && agg.shot_threat.games > 0 && (
+                              <ShotThreatBlock data={agg.shot_threat} />
+                            )}
+
+                            {agg.ddi && agg.ddi.games > 0 && (
+                              <div className="card" style={{ marginTop: 16 }}>
+                                <h3 style={{ fontSize: 14, marginBottom: 8, color: 'var(--text-secondary)' }}>
+                                  Defensive Disruption Index
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                                  <StatCard
+                                    label="DDI/60"
+                                    primary={agg.ddi.ddi_per_60 === null ? 'N/A' : agg.ddi.ddi_per_60.toFixed(1)}
+                                  />
+                                  <StatCard
+                                    label="Components (rec / blk / dz-pb)"
+                                    primary={`${agg.ddi.components.puck_recoveries} / ${agg.ddi.components.shots_blocked_defensively} / ${agg.ddi.components.dz_pb_wins}`}
+                                  />
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>
+                                  Composite proxy per §9.9: puck recoveries + defensive blocks + DZ puck battles won, scaled to per-60.
                                 </div>
                               </div>
                             )}
