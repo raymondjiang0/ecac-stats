@@ -5,7 +5,7 @@ and §9.11 for formulas.
 
 Goalie stats (§9.10) are deferred to Phase 4b.
 """
-from typing import Optional
+from typing import Optional, Union
 
 
 _LOCATIONS = [
@@ -19,7 +19,7 @@ def _pct(numer: int, denom: int) -> Optional[float]:
     return (numer / denom) if denom > 0 else None
 
 
-def _per60(count: int, toi_minutes: float) -> Optional[float]:
+def _per60(count: int, toi_minutes: Union[float, int]) -> Optional[float]:
     if toi_minutes <= 0 or count == 0:
         return None
     return count * 60.0 / toi_minutes
@@ -33,6 +33,11 @@ def shot_threat_by_scenario(shots_rows: list, pgs_rows: list) -> dict:
 
     Games with any PlayerGameShotsInStat data count; TOI is summed from
     PlayerGameStats rows (matching game_ids).
+
+    Note: `games` counts rows in `shots_rows` that have at least one populated
+    key stat (goals, shots, PP/SH shots). The caller is responsible for
+    pre-filtering `shots_rows` and `pgs_rows` to the same game set for
+    the same player.
     """
     total_shots = 0
     total_on_goal = 0
