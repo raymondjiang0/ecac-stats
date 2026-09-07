@@ -83,8 +83,8 @@ def shot_threat_by_scenario(shots_rows: list, pgs_rows: list) -> dict:
     fv_on = max(0, total_on_goal - pp_on - sh_on)
 
     toi_5v5 = sum((p.toi_5v5 or 0) for p in pgs_rows)
-    toi_pp = sum((p.toi_pp or 0) for p in pgs_rows)
-    toi_sh = sum((p.toi_sh or 0) for p in pgs_rows)
+    toi_pp = sum((getattr(p, 'toi_pp', None) or 0) for p in pgs_rows)
+    toi_sh = sum((getattr(p, 'toi_sh', None) or 0) for p in pgs_rows)
 
     return {
         "totals": {
