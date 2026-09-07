@@ -122,3 +122,60 @@ def shot_threat_by_scenario(shots_rows: list, pgs_rows: list) -> dict:
         },
         "games": games,
     }
+
+
+def defensive_disruption_index(
+    pgs_rows: list, instat_rows: list, shots_rows: list
+) -> dict:
+    """Composite off-puck defensive proxy (§9.9 with 2026-09-06 ruling).
+
+    DDI/60 = (puck_recoveries + shots_blocked_defensively + DZ PB wins) × 60 ÷ TOI
+
+    All three components require InStat. Returns ddi_per_60 = None when
+    any component has NO data (no row provided a value) OR when total
+    TOI is zero. Zero-value components with at least one populated row
+    are treated as zero, not as missing data.
+    """
+    recoveries = 0
+    blocks = 0
+    dz_pb = 0
+    recoveries_has_data = False
+    blocks_has_data = False
+    dz_pb_has_data = False
+    games = 0
+    total_toi = 0.0
+
+    for r in instat_rows:
+        if r.puck_recoveries is not None:
+            recoveries += r.puck_recoveries
+            recoveries_has_data = True
+        if r.pb_won_dz is not None:
+            dz_pb += r.pb_won_dz
+            dz_pb_has_data = True
+        if r.puck_recoveries or r.pb_won_dz:
+            games += 1
+
+    for r in shots_rows:
+        if r.shots_blocked_defensively is not None:
+            blocks += r.shots_blocked_defensively
+            blocks_has_data = True
+
+    for p in pgs_rows:
+        total_toi += p.toi_5v5 or 0
+
+    total_events = recoveries + blocks + dz_pb
+    if total_toi <= 0 or not (recoveries_has_data and blocks_has_data and dz_pb_has_data):
+        ddi_per_60 = None
+    else:
+        ddi_per_60 = total_events * 60.0 / total_toi
+
+    return {
+        "ddi_per_60": ddi_per_60,
+        "components": {
+            "puck_recoveries": recoveries,
+            "shots_blocked_defensively": blocks,
+            "dz_pb_wins": dz_pb,
+        },
+        "total_toi_minutes": total_toi,
+        "games": games,
+    }
