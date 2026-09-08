@@ -7,7 +7,7 @@ from ..database import get_db
 from ..models import Player, Game, TeamGameStats, PlayerGameStats
 from ..calculations import aggregate_team_stats, aggregate_player_stats
 from ..report_generator import generate_player_report, generate_team_report
-from ..enrichment import enrich_player_agg, load_player_instat_rows, load_team_instat_rows, build_position_cohorts
+from ..enrichment import enrich_player_agg, load_player_instat_rows, load_team_instat_rows, build_position_cohorts, load_player_shots_rows
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -58,6 +58,7 @@ def player_report(
     instat_rows = load_player_instat_rows(db, player_id, date_from, date_to)
     team_rows = load_team_instat_rows(db, date_from, date_to)
     position_cohorts = build_position_cohorts(all_players, db, date_from, date_to)
+    shots_rows = load_player_shots_rows(db, player_id, date_from, date_to)
 
     agg = enrich_player_agg(
         player, agg, all_aggs,
@@ -65,6 +66,7 @@ def player_report(
         team_instat_rows=team_rows,
         pgs_rows=pgs_rows,
         position_cohorts=position_cohorts,
+        shots_rows=shots_rows,
     )
 
     tgs_rows = db.query(TeamGameStats).filter(TeamGameStats.game_id.in_(game_ids)).all()

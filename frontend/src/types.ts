@@ -103,6 +103,8 @@ export interface PlayerAggStats {
   turnover_ratio?: TurnoverRatioStats
   danger_share?: DangerShareStats
   impact_score?: ImpactScoreStats
+  shot_threat?: ShotThreatStats
+  ddi?: DDIStats
 }
 
 export interface PlayerTrendPoint {
@@ -293,5 +295,57 @@ export interface SpecialTeamsV2Stats {
   pk_opp_breakout_rate: number | null
   pp_minutes: number | null
   pk_count: number
+  games: number
+}
+
+export interface ScenarioCell {
+  shots: number
+  on_goal: number
+  shots_per_60?: number | null   // only on strength cells
+  on_goal_pct: number | null
+}
+
+export interface ShotThreatStats {
+  totals: {
+    goals: number
+    shots: number
+    shots_on_goal: number
+    toi_5v5_minutes: number
+  }
+  by_strength: {
+    '5v5': ScenarioCell
+    pp: ScenarioCell
+    sh: ScenarioCell
+  }
+  by_context: {
+    positional: ScenarioCell
+    counter: ScenarioCell
+  }
+  by_location: {
+    slot: ScenarioCell
+    center: ScenarioCell
+    right_flank: ScenarioCell
+    left_flank: ScenarioCell
+    blue_line_right: ScenarioCell
+    blue_line_center: ScenarioCell
+    blue_line_left: ScenarioCell
+  }
+  by_type: {
+    slapshot: ScenarioCell
+    wristshot: ScenarioCell
+  }
+  games: number
+}
+
+export interface DDIComponents {
+  puck_recoveries: number
+  shots_blocked_defensively: number
+  dz_pb_wins: number
+}
+
+export interface DDIStats {
+  ddi_per_60: number | null
+  components: DDIComponents
+  total_toi_minutes: number
   games: number
 }

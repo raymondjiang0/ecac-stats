@@ -164,27 +164,38 @@ def danger_zone_shot_share(
     instat_rows: list,
     team_instat_rows: list,
     pgs_rows: list,
+    shots_rows: Optional[list] = None,
 ) -> dict:
     """Player's share of team's high-danger shots + per-60 rate (§9.6).
 
-    Numerator: sum of player's SCA-proxy shots across games with InStat data.
-    Denominator: sum of team's scoring_chance_shots across ALL InStat games
-    in the window.
+    Numerator: when `shots_rows` (PlayerGameShotsInStat) is provided, uses
+    slot_shots_total + center_shots_total as the SCA proxy (spec §9.6:
+    "shots from scoring chance area" = InStat's slot + center zones).
+    When shots_rows is None or empty, falls back to Phase 3's `r.shots`
+    proxy on instat_rows for backward compat with callers that haven't
+    loaded shots data yet.
+
+    Denominator: sum of team's scoring_chance_shots across ALL InStat
+    games in the window.
 
     Note the asymmetry: a player who missed games where the team recorded
     SCA shots will have their share_pct understated. This matches spec §9.6
     (share is player contribution to team output, not per-game percentage)
     but consumers should be aware."""
-    player_sca = 0
-    games_with_data = 0
-    for r in instat_rows:
-        # NOTE: Using r.shots as an SCA proxy — PlayerGameStatsInStat has no
-        # scoring_chance_shots column yet. Phase 4's InStat shots-log parser
-        # will populate a true per-player SCA count; revisit this proxy then.
-        val = r.shots or 0
-        if val > 0:
-            games_with_data += 1
-        player_sca += val
+    if shots_rows:
+        player_sca = sum((r.slot_shots_total or 0) + (r.center_shots_total or 0)
+                         for r in shots_rows)
+        games_with_data = sum(1 for r in shots_rows
+                              if (r.slot_shots_total or 0) + (r.center_shots_total or 0) > 0)
+    else:
+        # Phase 3 fallback proxy
+        player_sca = 0
+        games_with_data = 0
+        for r in instat_rows:
+            val = r.shots or 0
+            if val > 0:
+                games_with_data += 1
+            player_sca += val
 
     team_sca = sum((t.scoring_chance_shots or 0) for t in team_instat_rows)
     total_toi = sum((p.toi_5v5 or 0) for p in pgs_rows)

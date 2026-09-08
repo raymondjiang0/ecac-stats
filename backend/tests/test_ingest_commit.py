@@ -2,7 +2,7 @@ import pytest
 from datetime import date
 from app.models import (
     Player, Game, TeamGameStatsInStat, PlayerGameStatsInStat,
-    PlayerHitMatrix, PlayerPassMatrix,
+    PlayerHitMatrix, PlayerPassMatrix, PlayerGameShotsInStat,
 )
 from app.ingest.commit import commit_parsed
 
@@ -160,6 +160,31 @@ class TestCommitParsed:
         row = db_session.query(PlayerHitMatrix).filter_by(game_id=g.id).one()
         assert row.delivered == 0
         assert row.received == 0
+
+    def test_writes_shots(self, db_session, game_and_players):
+        g, p10, p7 = game_and_players
+        parsed = {
+            "templates": {
+                "instat_team_stats": _empty_team(),
+                "instat_players_main": [], "instat_time_distribution": [],
+                "instat_challenges": [], "instat_hit_matrix": [], "instat_pass_matrix": [],
+                "instat_shots": [
+                    {"jersey_number": "10", "player_name": "Ten",
+                     "goals": 1, "shots_total": 5, "shots_on_goal": 3,
+                     "shots_blocked_defensively": 2,
+                     "slot_shots_total": 2, "slot_shots_on_goal": 2,
+                     "wristshot_total": 4, "wristshot_on_goal": 2},
+                ],
+            },
+            "warnings": [],
+        }
+        report = commit_parsed(parsed, g.id, db_session)
+        assert report["wrote"]["instat_shots"] == 1
+        row = db_session.query(PlayerGameShotsInStat).filter_by(game_id=g.id).one()
+        assert row.player_id == p10.id
+        assert row.goals == 1
+        assert row.shots_total == 5
+        assert row.slot_shots_total == 2
 
 
 def _empty_team():

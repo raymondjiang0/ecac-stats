@@ -22,6 +22,7 @@ GAME_TIME_SECTION = "GAME TIME DISTRIBUTION"    # team-scoped
 CHALLENGES_SECTION = "CHALLENGES"               # team-scoped
 HITS_DISTRIBUTION_SECTION = "HITS DISTRIBUTION"     # team-scoped
 PASSES_DISTRIBUTION_SECTION = "PASSES DISTRIBUTION" # team-scoped
+SHOTS_SECTION = "SHOTS"                              # team-scoped
 
 
 # Match-wide sections don't carry a team suffix

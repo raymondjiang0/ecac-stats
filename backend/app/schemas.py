@@ -296,3 +296,43 @@ class PlayerPassMatrixOut(BaseModel):
     count: int
 
     model_config = {"from_attributes": True}
+
+
+# ── Player Game Shots (InStat) ────────────────────────────────────────────────
+
+class PlayerGameShotsInStatOut(BaseModel):
+    id: Optional[int] = None
+    player_id: int
+    game_id: int
+    goals: Optional[int] = None
+    shots_total: Optional[int] = None
+    shots_on_goal: Optional[int] = None
+    shots_blocked_defensively: Optional[int] = None
+    pp_shots_total: Optional[int] = None
+    pp_shots_on_goal: Optional[int] = None
+    sh_shots_total: Optional[int] = None
+    sh_shots_on_goal: Optional[int] = None
+    positional_shots_total: Optional[int] = None
+    positional_shots_on_goal: Optional[int] = None
+    counter_shots_total: Optional[int] = None
+    counter_shots_on_goal: Optional[int] = None
+    slot_shots_total: Optional[int] = None
+    slot_shots_on_goal: Optional[int] = None
+    center_shots_total: Optional[int] = None
+    center_shots_on_goal: Optional[int] = None
+    right_flank_shots_total: Optional[int] = None
+    right_flank_shots_on_goal: Optional[int] = None
+    left_flank_shots_total: Optional[int] = None
+    left_flank_shots_on_goal: Optional[int] = None
+    blue_line_right_shots_total: Optional[int] = None
+    blue_line_right_shots_on_goal: Optional[int] = None
+    blue_line_center_shots_total: Optional[int] = None
+    blue_line_center_shots_on_goal: Optional[int] = None
+    blue_line_left_shots_total: Optional[int] = None
+    blue_line_left_shots_on_goal: Optional[int] = None
+    slapshot_total: Optional[int] = None
+    slapshot_on_goal: Optional[int] = None
+    wristshot_total: Optional[int] = None
+    wristshot_on_goal: Optional[int] = None
+
+    model_config = {"from_attributes": True}

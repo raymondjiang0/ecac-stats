@@ -7,6 +7,7 @@ of the same game replaces prior values.
 from ..models import (
     Player, TeamGameStatsInStat, PlayerGameStatsInStat,
     PlayerGameStats, PlayerHitMatrix, PlayerPassMatrix,
+    PlayerGameShotsInStat,
 )
 
 
@@ -156,6 +157,39 @@ def commit_parsed(parsed: dict, game_id: int, db_session) -> dict:
                 db_session.add(existing)
             existing.count = row.get("count") or 0
             wrote["instat_pass_matrix"] += 1
+
+        # instat_shots: upsert per player row into PlayerGameShotsInStat
+        for row in templates.get("instat_shots") or []:
+            player = roster.get(str(row.get("jersey_number", "")).strip())
+            if player is None:
+                skipped.append(
+                    f"shots: jersey {row.get('jersey_number')!r} not in roster"
+                )
+                continue
+            existing = db_session.query(PlayerGameShotsInStat).filter_by(
+                game_id=game_id, player_id=player.id
+            ).one_or_none()
+            if existing is None:
+                existing = PlayerGameShotsInStat(game_id=game_id, player_id=player.id)
+                db_session.add(existing)
+            for k in ("goals", "shots_total", "shots_on_goal",
+                      "shots_blocked_defensively",
+                      "pp_shots_total", "pp_shots_on_goal",
+                      "sh_shots_total", "sh_shots_on_goal",
+                      "positional_shots_total", "positional_shots_on_goal",
+                      "counter_shots_total", "counter_shots_on_goal",
+                      "slot_shots_total", "slot_shots_on_goal",
+                      "center_shots_total", "center_shots_on_goal",
+                      "right_flank_shots_total", "right_flank_shots_on_goal",
+                      "left_flank_shots_total", "left_flank_shots_on_goal",
+                      "blue_line_right_shots_total", "blue_line_right_shots_on_goal",
+                      "blue_line_center_shots_total", "blue_line_center_shots_on_goal",
+                      "blue_line_left_shots_total", "blue_line_left_shots_on_goal",
+                      "slapshot_total", "slapshot_on_goal",
+                      "wristshot_total", "wristshot_on_goal"):
+                if k in row:
+                    setattr(existing, k, row[k])
+            wrote["instat_shots"] += 1
 
         db_session.commit()
     except Exception:

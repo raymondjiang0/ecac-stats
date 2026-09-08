@@ -18,12 +18,15 @@ def enrich_player_agg(
     team_instat_rows: list = None,
     pgs_rows: list = None,
     position_cohorts: dict = None,
+    shots_rows: list = None,
 ) -> dict:
-    """Attach comparisons/flags/game_flags (Phase 1) and Tier 2 stats
-    (Phase 3) to a player aggregate in-place. Returns the same dict.
+    """Attach comparisons/flags/game_flags (Phase 1), Tier 2 stats
+    (Phase 3), and Tier 3 stats (Phase 4) to a player aggregate in-place.
+    Returns the same dict.
 
-    Phase 1 layers always run. Tier 2 layers run only when InStat rows are
-    provided — passing None (or omitting) preserves pre-Phase-3 behavior.
+    Phase 1 layers always run. Tier 2 layers run only when instat_rows are
+    provided. Tier 3 layers run only when shots_rows are provided. Omitting
+    kwargs preserves earlier-phase behavior (backward compat).
     """
     agg["comparisons"] = build_comparisons(player, agg, all_aggs)
 
@@ -53,10 +56,19 @@ def enrich_player_agg(
         agg["turnover_ratio"] = turnover_location_ratio(instat_rows)
         agg["danger_share"] = danger_zone_shot_share(
             instat_rows, team_instat_rows or [], pgs_rows or [],
+            shots_rows=shots_rows,  # pass through; None preserves Phase 3 behavior
         )
         instat_by_game = {r.game_id: r for r in instat_rows}
         agg["impact_score"] = impact_score(
             player, pgs_rows or [], instat_by_game, position_cohorts or {},
+        )
+
+    # Phase 4: Tier 3 stats
+    if shots_rows is not None:
+        from .tier3_stats import shot_threat_by_scenario, defensive_disruption_index
+        agg["shot_threat"] = shot_threat_by_scenario(shots_rows, pgs_rows or [])
+        agg["ddi"] = defensive_disruption_index(
+            pgs_rows or [], instat_rows or [], shots_rows,
         )
 
     return agg
@@ -65,7 +77,7 @@ def enrich_player_agg(
 from datetime import date as _date
 from sqlalchemy.orm import Session
 from typing import Optional as _Optional
-from .models import PlayerGameStats, PlayerGameStatsInStat, TeamGameStatsInStat, Game
+from .models import PlayerGameStats, PlayerGameStatsInStat, TeamGameStatsInStat, Game, PlayerGameShotsInStat
 from .cohorts import position_group
 
 
@@ -94,6 +106,23 @@ def load_team_instat_rows(
 ) -> list[TeamGameStatsInStat]:
     """Load TeamGameStatsInStat rows, optionally filtered by game date range."""
     q = db.query(TeamGameStatsInStat).join(Game)
+    if date_from is not None:
+        q = q.filter(Game.date >= date_from)
+    if date_to is not None:
+        q = q.filter(Game.date <= date_to)
+    return q.all()
+
+
+def load_player_shots_rows(
+    db: Session,
+    player_id: int,
+    date_from: _Optional[_date] = None,
+    date_to: _Optional[_date] = None,
+) -> list[PlayerGameShotsInStat]:
+    """Load PlayerGameShotsInStat rows for a player, optionally by date range."""
+    q = db.query(PlayerGameShotsInStat).join(Game).filter(
+        PlayerGameShotsInStat.player_id == player_id
+    )
     if date_from is not None:
         q = q.filter(Game.date >= date_from)
     if date_to is not None:
